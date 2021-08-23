@@ -217,8 +217,8 @@ int format_string(const char* string, char* buffer, int buffer_size, va_list arg
 
 //--------------------------------------------------------------------------------------------------
 
-void memory_copy(void* source, void* destination, int size) {
-    u8* source_pointer = source;
+void memory_copy(const void* source, void* destination, int size) {
+    const u8* source_pointer = source;
     u8* destination_pointer = destination;
 
     for (int i = 0; i < size; i++) {

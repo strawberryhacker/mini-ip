@@ -1,17 +1,15 @@
 // Author: strawberryhacker
 
-#ifndef GMAC_H
-#define GMAC_H
+#ifndef ARP_H
+#define ARP_H
 
 #include "utilities.h"
 #include "network/core.h"
 
 //--------------------------------------------------------------------------------------------------
 
-void gmac_init();
-bool gmac_link_is_up();
-void gmac_set_mac_address(Mac* mac);
-void gmac_send(NetworkBuffer* buffer);
-NetworkBuffer* gmac_receive();
+void arp_init();
+void arp_send(NetworkBuffer* buffer, u32 destination_ip);
+void arp_task();
 
 #endif

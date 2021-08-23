@@ -35,6 +35,6 @@ typedef int64_t  s64;
 int format_string(const char* string, char* buffer, int buffer_size, va_list arguments);
 void memory_clear(void* memory, int size);
 void memory_fill(void* memory, u8 fill, int size);
-void memory_copy(void* source, void* destination, int size);
+void memory_copy(const void* source, void* destination, int size);
 
 #endif

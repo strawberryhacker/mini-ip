@@ -181,7 +181,6 @@ void gmac_init() {
     set_pin_function(GPIOD, 16, PIN_FUNCTION_A);
 
     enable_peripheral_clock(44);
-    network_buffer_init();
 
     // Setup the DMA descriptors.
     for (int i = 0; i < TRANSMIT_DESCRIPTOR_COUNT; i++) {
@@ -231,6 +230,13 @@ bool gmac_link_is_up() {
 
 //--------------------------------------------------------------------------------------------------
 
+void gmac_set_mac_address(Mac* mac) {
+    GMAC->SAB1 = mac->byte[3] << 24 | mac->byte[2] << 16 | mac->byte[1] << 8 | mac->byte[0];
+    GMAC->SAT1 = mac->byte[5] << 8 | mac->byte[4];
+}
+
+//--------------------------------------------------------------------------------------------------
+
 void gmac_send(NetworkBuffer* buffer) {
     volatile TxDescriptor* descriptor = &gmac_tx_descriptors[tx_index];
 
@@ -244,7 +250,6 @@ void gmac_send(NetworkBuffer* buffer) {
     // If the network is saturated, just drop the packet.
     if (descriptor->owner == OWNER_GMAC) {
         free_network_buffer(buffer);
-        print("Error\n");
         return;
     }
 
