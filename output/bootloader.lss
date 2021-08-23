@@ -1,0 +1,1417 @@
+
+/home/bjorn/omnimod-new/make/../output/bootloader.elf:     file format elf32-littlearm
+
+Sections:
+Idx Name          Size      VMA       LMA       File off  Algn
+  0 .vector_table 000000f8  00400000  00400000  00010000  2**2
+                  CONTENTS, ALLOC, LOAD, DATA
+  1 .text         0000079c  004000f8  004000f8  000100f8  2**2
+                  CONTENTS, ALLOC, LOAD, READONLY, CODE
+  2 .rodata       00000060  00400894  00400894  00010894  2**2
+                  CONTENTS, ALLOC, LOAD, READONLY, DATA
+  3 .data         00000000  20000000  004008f4  00020000  2**0
+                  CONTENTS, ALLOC, LOAD, DATA
+  4 .bss          0000ccc0  20000000  004008f4  00020000  2**3
+                  ALLOC
+  5 .stack        00001000  2000ccc0  004008f4  0002ccc0  2**0
+                  ALLOC
+  6 .debug_info   00002993  00000000  00000000  00020000  2**0
+                  CONTENTS, READONLY, DEBUGGING, OCTETS
+  7 .debug_abbrev 00000c5a  00000000  00000000  00022993  2**0
+                  CONTENTS, READONLY, DEBUGGING, OCTETS
+  8 .debug_loc    0000075b  00000000  00000000  000235ed  2**0
+                  CONTENTS, READONLY, DEBUGGING, OCTETS
+  9 .debug_aranges 00000108  00000000  00000000  00023d48  2**0
+                  CONTENTS, READONLY, DEBUGGING, OCTETS
+ 10 .debug_ranges 000001d8  00000000  00000000  00023e50  2**0
+                  CONTENTS, READONLY, DEBUGGING, OCTETS
+ 11 .debug_macro  0000150c  00000000  00000000  00024028  2**0
+                  CONTENTS, READONLY, DEBUGGING, OCTETS
+ 12 .debug_line   00001456  00000000  00000000  00025534  2**0
+                  CONTENTS, READONLY, DEBUGGING, OCTETS
+ 13 .debug_str    00004c2d  00000000  00000000  0002698a  2**0
+                  CONTENTS, READONLY, DEBUGGING, OCTETS
+ 14 .comment      00000059  00000000  00000000  0002b5b7  2**0
+                  CONTENTS, READONLY
+ 15 .ARM.attributes 0000002e  00000000  00000000  0002b610  2**0
+                  CONTENTS, READONLY
+ 16 .debug_frame  00000288  00000000  00000000  0002b640  2**2
+                  CONTENTS, READONLY, DEBUGGING, OCTETS
+
+Disassembly of section .text:
+
+004000f8 <delay>:
+#include "gmac.h"
+#include "network.h"
+
+//--------------------------------------------------------------------------------------------------
+
+void delay() {
+  4000f8:	4b02      	ldr	r3, [pc, #8]	; (400104 <delay+0xc>)
+    for (int i = 0; i < 5000000; i++) {
+        __asm__("nop");
+  4000fa:	bf00      	nop
+    for (int i = 0; i < 5000000; i++) {
+  4000fc:	3b01      	subs	r3, #1
+  4000fe:	d1fc      	bne.n	4000fa <delay+0x2>
+    }
+}
+  400100:	4770      	bx	lr
+  400102:	bf00      	nop
+  400104:	004c4b40 	.word	0x004c4b40
+
+00400108 <acc_interrupt>:
+}
+
+//--------------------------------------------------------------------------------------------------
+
+static void exception_not_implemented() {
+    while (1);
+  400108:	e7fe      	b.n	400108 <acc_interrupt>
+  40010a:	bf00      	nop
+
+0040010c <reset_handler>:
+    while (destination != &linker_data_end) {
+  40010c:	4939      	ldr	r1, [pc, #228]	; (4001f4 <reset_handler+0xe8>)
+static void reset_handler() {
+  40010e:	b5f8      	push	{r3, r4, r5, r6, r7, lr}
+    while (destination != &linker_data_end) {
+  400110:	4b39      	ldr	r3, [pc, #228]	; (4001f8 <reset_handler+0xec>)
+  400112:	4299      	cmp	r1, r3
+  400114:	d01e      	beq.n	400154 <reset_handler+0x48>
+  400116:	4a39      	ldr	r2, [pc, #228]	; (4001fc <reset_handler+0xf0>)
+  400118:	3b04      	subs	r3, #4
+  40011a:	460c      	mov	r4, r1
+  40011c:	ea42 0501 	orr.w	r5, r2, r1
+  400120:	1a5b      	subs	r3, r3, r1
+  400122:	076d      	lsls	r5, r5, #29
+  400124:	ea4f 0093 	mov.w	r0, r3, lsr #2
+  400128:	d159      	bne.n	4001de <reset_handler+0xd2>
+  40012a:	2b28      	cmp	r3, #40	; 0x28
+  40012c:	d957      	bls.n	4001de <reset_handler+0xd2>
+  40012e:	1c43      	adds	r3, r0, #1
+  400130:	4615      	mov	r5, r2
+  400132:	0858      	lsrs	r0, r3, #1
+  400134:	eb02 00c0 	add.w	r0, r2, r0, lsl #3
+        *destination++ = *source++;
+  400138:	e8f5 6702 	ldrd	r6, r7, [r5], #8
+  40013c:	4285      	cmp	r5, r0
+  40013e:	e8e4 6702 	strd	r6, r7, [r4], #8
+    while (destination != &linker_data_end) {
+  400142:	d1f9      	bne.n	400138 <reset_handler+0x2c>
+  400144:	f023 0001 	bic.w	r0, r3, #1
+  400148:	07db      	lsls	r3, r3, #31
+  40014a:	d503      	bpl.n	400154 <reset_handler+0x48>
+        *destination++ = *source++;
+  40014c:	f852 3020 	ldr.w	r3, [r2, r0, lsl #2]
+  400150:	f841 3020 	str.w	r3, [r1, r0, lsl #2]
+    while (source != &linker_zero_end) {
+  400154:	4b2a      	ldr	r3, [pc, #168]	; (400200 <reset_handler+0xf4>)
+  400156:	4a2b      	ldr	r2, [pc, #172]	; (400204 <reset_handler+0xf8>)
+  400158:	4293      	cmp	r3, r2
+  40015a:	d03b      	beq.n	4001d4 <reset_handler+0xc8>
+  40015c:	1f11      	subs	r1, r2, #4
+  40015e:	f3c3 0480 	ubfx	r4, r3, #2, #1
+  400162:	1ac9      	subs	r1, r1, r3
+  400164:	2914      	cmp	r1, #20
+  400166:	ea4f 0691 	mov.w	r6, r1, lsr #2
+  40016a:	d918      	bls.n	40019e <reset_handler+0x92>
+  40016c:	b3ac      	cbz	r4, 4001da <reset_handler+0xce>
+        *source++ = 0;
+  40016e:	2100      	movs	r1, #0
+  400170:	4618      	mov	r0, r3
+  400172:	f840 1b04 	str.w	r1, [r0], #4
+    while (source != &linker_zero_end) {
+  400176:	f1c4 0101 	rsb	r1, r4, #1
+  40017a:	eb03 0384 	add.w	r3, r3, r4, lsl #2
+        *source++ = 0;
+  40017e:	2500      	movs	r5, #0
+  400180:	2400      	movs	r4, #0
+  400182:	4431      	add	r1, r6
+  400184:	084e      	lsrs	r6, r1, #1
+  400186:	eb03 06c6 	add.w	r6, r3, r6, lsl #3
+  40018a:	e8e3 4502 	strd	r4, r5, [r3], #8
+    while (source != &linker_zero_end) {
+  40018e:	429e      	cmp	r6, r3
+  400190:	d1fb      	bne.n	40018a <reset_handler+0x7e>
+  400192:	f021 0401 	bic.w	r4, r1, #1
+  400196:	42a1      	cmp	r1, r4
+  400198:	eb00 0384 	add.w	r3, r0, r4, lsl #2
+  40019c:	d01a      	beq.n	4001d4 <reset_handler+0xc8>
+        *source++ = 0;
+  40019e:	4618      	mov	r0, r3
+  4001a0:	2100      	movs	r1, #0
+  4001a2:	f840 1b04 	str.w	r1, [r0], #4
+    while (source != &linker_zero_end) {
+  4001a6:	4290      	cmp	r0, r2
+  4001a8:	d014      	beq.n	4001d4 <reset_handler+0xc8>
+        *source++ = 0;
+  4001aa:	f103 0008 	add.w	r0, r3, #8
+  4001ae:	6059      	str	r1, [r3, #4]
+    while (source != &linker_zero_end) {
+  4001b0:	4290      	cmp	r0, r2
+  4001b2:	d00f      	beq.n	4001d4 <reset_handler+0xc8>
+        *source++ = 0;
+  4001b4:	f103 000c 	add.w	r0, r3, #12
+  4001b8:	6099      	str	r1, [r3, #8]
+    while (source != &linker_zero_end) {
+  4001ba:	4290      	cmp	r0, r2
+  4001bc:	d00a      	beq.n	4001d4 <reset_handler+0xc8>
+        *source++ = 0;
+  4001be:	f103 0010 	add.w	r0, r3, #16
+  4001c2:	60d9      	str	r1, [r3, #12]
+    while (source != &linker_zero_end) {
+  4001c4:	4290      	cmp	r0, r2
+  4001c6:	d005      	beq.n	4001d4 <reset_handler+0xc8>
+        *source++ = 0;
+  4001c8:	f103 0014 	add.w	r0, r3, #20
+  4001cc:	6119      	str	r1, [r3, #16]
+    while (source != &linker_zero_end) {
+  4001ce:	4290      	cmp	r0, r2
+        *source++ = 0;
+  4001d0:	bf18      	it	ne
+  4001d2:	6159      	strne	r1, [r3, #20]
+    main();
+  4001d4:	f000 fb10 	bl	4007f8 <main>
+    while (1);
+  4001d8:	e7fe      	b.n	4001d8 <reset_handler+0xcc>
+    source = &linker_zero_start;
+  4001da:	4618      	mov	r0, r3
+  4001dc:	e7cb      	b.n	400176 <reset_handler+0x6a>
+  4001de:	3304      	adds	r3, #4
+    u32* source = &linker_relocate_start;
+  4001e0:	4906      	ldr	r1, [pc, #24]	; (4001fc <reset_handler+0xf0>)
+  4001e2:	4413      	add	r3, r2
+        *destination++ = *source++;
+  4001e4:	f851 2b04 	ldr.w	r2, [r1], #4
+    while (destination != &linker_data_end) {
+  4001e8:	4299      	cmp	r1, r3
+        *destination++ = *source++;
+  4001ea:	f844 2b04 	str.w	r2, [r4], #4
+    while (destination != &linker_data_end) {
+  4001ee:	d1f9      	bne.n	4001e4 <reset_handler+0xd8>
+  4001f0:	e7b0      	b.n	400154 <reset_handler+0x48>
+  4001f2:	bf00      	nop
+  4001f4:	20000000 	.word	0x20000000
+  4001f8:	20000000 	.word	0x20000000
+  4001fc:	004008f4 	.word	0x004008f4
+  400200:	20000000 	.word	0x20000000
+  400204:	2000ccc0 	.word	0x2000ccc0
+
+00400208 <print_init>:
+    UART0->THR = c;
+}
+
+//--------------------------------------------------------------------------------------------------
+
+void print_init() {
+  400208:	b510      	push	{r4, lr}
+    enable_peripheral_clock(7);
+
+    set_pin_function(GPIOA,  9, PIN_FUNCTION_A);
+  40020a:	4c0b      	ldr	r4, [pc, #44]	; (400238 <print_init+0x30>)
+    enable_peripheral_clock(7);
+  40020c:	2007      	movs	r0, #7
+  40020e:	f000 fa81 	bl	400714 <enable_peripheral_clock>
+    set_pin_function(GPIOA,  9, PIN_FUNCTION_A);
+  400212:	2200      	movs	r2, #0
+  400214:	4620      	mov	r0, r4
+  400216:	2109      	movs	r1, #9
+  400218:	f000 f9f0 	bl	4005fc <set_pin_function>
+    set_pin_function(GPIOA, 10, PIN_FUNCTION_A);
+  40021c:	4620      	mov	r0, r4
+  40021e:	2200      	movs	r2, #0
+  400220:	210a      	movs	r1, #10
+  400222:	f000 f9eb 	bl	4005fc <set_pin_function>
+
+    UART0->MR = 4 << 9;
+  400226:	4b05      	ldr	r3, [pc, #20]	; (40023c <print_init+0x34>)
+  400228:	f44f 6000 	mov.w	r0, #2048	; 0x800
+    UART0->BRGR = (u16)(120000000 / 16 / 921600);
+  40022c:	2108      	movs	r1, #8
+    UART0->CR = 1 << 4 | 1 << 6;
+  40022e:	2250      	movs	r2, #80	; 0x50
+    UART0->MR = 4 << 9;
+  400230:	6058      	str	r0, [r3, #4]
+    UART0->BRGR = (u16)(120000000 / 16 / 921600);
+  400232:	6219      	str	r1, [r3, #32]
+    UART0->CR = 1 << 4 | 1 << 6;
+  400234:	601a      	str	r2, [r3, #0]
+}
+  400236:	bd10      	pop	{r4, pc}
+  400238:	400e0e00 	.word	0x400e0e00
+  40023c:	400e0600 	.word	0x400e0600
+
+00400240 <print>:
+
+//--------------------------------------------------------------------------------------------------
+
+void print(const char* text, ...) {
+  400240:	b40f      	push	{r0, r1, r2, r3}
+  400242:	b410      	push	{r4}
+  400244:	9801      	ldr	r0, [sp, #4]
+    while (*text) {
+  400246:	7801      	ldrb	r1, [r0, #0]
+  400248:	b159      	cbz	r1, 400262 <print+0x22>
+    while ((UART0->SR & (1 << 9)) == 0);
+  40024a:	4a0a      	ldr	r2, [pc, #40]	; (400274 <print+0x34>)
+    UART0->THR = c;
+  40024c:	240d      	movs	r4, #13
+        // Some terminals like Linux's screen doen not work properly without the CR-LF sequence.
+        if (*text == '\n') {
+  40024e:	290a      	cmp	r1, #10
+  400250:	d00a      	beq.n	400268 <print+0x28>
+    while ((UART0->SR & (1 << 9)) == 0);
+  400252:	6953      	ldr	r3, [r2, #20]
+  400254:	059b      	lsls	r3, r3, #22
+  400256:	d5fc      	bpl.n	400252 <print+0x12>
+    UART0->THR = c;
+  400258:	61d1      	str	r1, [r2, #28]
+    while (*text) {
+  40025a:	f810 1f01 	ldrb.w	r1, [r0, #1]!
+  40025e:	2900      	cmp	r1, #0
+  400260:	d1f5      	bne.n	40024e <print+0xe>
+            print_char('\r');
+        }
+
+        print_char(*text++);
+    }
+}
+  400262:	bc10      	pop	{r4}
+  400264:	b004      	add	sp, #16
+  400266:	4770      	bx	lr
+    while ((UART0->SR & (1 << 9)) == 0);
+  400268:	6953      	ldr	r3, [r2, #20]
+  40026a:	0599      	lsls	r1, r3, #22
+  40026c:	d5fc      	bpl.n	400268 <print+0x28>
+    UART0->THR = c;
+  40026e:	61d4      	str	r4, [r2, #28]
+  400270:	7801      	ldrb	r1, [r0, #0]
+    while ((UART0->SR & (1 << 9)) == 0);
+  400272:	e7ee      	b.n	400252 <print+0x12>
+  400274:	400e0600 	.word	0x400e0600
+
+00400278 <phy_write>:
+static int rx_index;
+
+//--------------------------------------------------------------------------------------------------
+
+void phy_write(int phy_address, int register_address, u16 data) {
+    GMAC->MAN = 1 << 30 | 1 << 28 | phy_address << 23 | register_address << 18 | 1 << 17 | data;
+  400278:	ea42 52c0 	orr.w	r2, r2, r0, lsl #23
+  40027c:	4b05      	ldr	r3, [pc, #20]	; (400294 <phy_write+0x1c>)
+  40027e:	4806      	ldr	r0, [pc, #24]	; (400298 <phy_write+0x20>)
+  400280:	ea42 4181 	orr.w	r1, r2, r1, lsl #18
+    while ((GMAC->NSR & (1 << 2)) == 0);
+  400284:	4602      	mov	r2, r0
+    GMAC->MAN = 1 << 30 | 1 << 28 | phy_address << 23 | register_address << 18 | 1 << 17 | data;
+  400286:	430b      	orrs	r3, r1
+  400288:	6343      	str	r3, [r0, #52]	; 0x34
+    while ((GMAC->NSR & (1 << 2)) == 0);
+  40028a:	6893      	ldr	r3, [r2, #8]
+  40028c:	075b      	lsls	r3, r3, #29
+  40028e:	d5fc      	bpl.n	40028a <phy_write+0x12>
+}
+  400290:	4770      	bx	lr
+  400292:	bf00      	nop
+  400294:	50020000 	.word	0x50020000
+  400298:	40034000 	.word	0x40034000
+
+0040029c <phy_read>:
+
+//--------------------------------------------------------------------------------------------------
+
+u16 phy_read(int phy_address, int register_address) {
+    GMAC->MAN = 1 << 30 | 1 << 29 | phy_address << 23 | register_address << 18 | 1 << 17;
+  40029c:	0489      	lsls	r1, r1, #18
+  40029e:	4b07      	ldr	r3, [pc, #28]	; (4002bc <phy_read+0x20>)
+u16 phy_read(int phy_address, int register_address) {
+  4002a0:	b410      	push	{r4}
+    GMAC->MAN = 1 << 30 | 1 << 29 | phy_address << 23 | register_address << 18 | 1 << 17;
+  4002a2:	ea41 51c0 	orr.w	r1, r1, r0, lsl #23
+  4002a6:	4c06      	ldr	r4, [pc, #24]	; (4002c0 <phy_read+0x24>)
+  4002a8:	430b      	orrs	r3, r1
+    while ((GMAC->NSR & (1 << 2)) == 0);
+  4002aa:	4622      	mov	r2, r4
+    GMAC->MAN = 1 << 30 | 1 << 29 | phy_address << 23 | register_address << 18 | 1 << 17;
+  4002ac:	6363      	str	r3, [r4, #52]	; 0x34
+    while ((GMAC->NSR & (1 << 2)) == 0);
+  4002ae:	6893      	ldr	r3, [r2, #8]
+  4002b0:	075b      	lsls	r3, r3, #29
+  4002b2:	d5fc      	bpl.n	4002ae <phy_read+0x12>
+    return (u16)GMAC->MAN;
+  4002b4:	6b50      	ldr	r0, [r2, #52]	; 0x34
+}
+  4002b6:	bc10      	pop	{r4}
+  4002b8:	b280      	uxth	r0, r0
+  4002ba:	4770      	bx	lr
+  4002bc:	60020000 	.word	0x60020000
+  4002c0:	40034000 	.word	0x40034000
+
+004002c4 <gmac_init>:
+// @Incomplete: setup the PHY interrupt pin.
+
+//--------------------------------------------------------------------------------------------------
+
+void gmac_init() {
+    set_pin_function(GPIOD,  0, PIN_FUNCTION_A);
+  4002c4:	2200      	movs	r2, #0
+  4002c6:	486d      	ldr	r0, [pc, #436]	; (40047c <gmac_init+0x1b8>)
+void gmac_init() {
+  4002c8:	b5f8      	push	{r3, r4, r5, r6, r7, lr}
+
+    enable_peripheral_clock(44);
+    network_buffer_init();
+
+    // Setup the DMA descriptors.
+    for (int i = 0; i < TRANSMIT_DESCRIPTOR_COUNT; i++) {
+  4002ca:	4614      	mov	r4, r2
+    set_pin_function(GPIOD,  0, PIN_FUNCTION_A);
+  4002cc:	4611      	mov	r1, r2
+  4002ce:	f000 f995 	bl	4005fc <set_pin_function>
+    set_pin_function(GPIOD,  1, PIN_FUNCTION_A);
+  4002d2:	2101      	movs	r1, #1
+  4002d4:	4622      	mov	r2, r4
+  4002d6:	4869      	ldr	r0, [pc, #420]	; (40047c <gmac_init+0x1b8>)
+  4002d8:	f000 f990 	bl	4005fc <set_pin_function>
+    set_pin_function(GPIOD,  2, PIN_FUNCTION_A);
+  4002dc:	4622      	mov	r2, r4
+  4002de:	2102      	movs	r1, #2
+  4002e0:	4866      	ldr	r0, [pc, #408]	; (40047c <gmac_init+0x1b8>)
+  4002e2:	f000 f98b 	bl	4005fc <set_pin_function>
+    set_pin_function(GPIOD,  3, PIN_FUNCTION_A);
+  4002e6:	4622      	mov	r2, r4
+  4002e8:	2103      	movs	r1, #3
+  4002ea:	4864      	ldr	r0, [pc, #400]	; (40047c <gmac_init+0x1b8>)
+  4002ec:	f000 f986 	bl	4005fc <set_pin_function>
+    set_pin_function(GPIOD,  4, PIN_FUNCTION_A);
+  4002f0:	4622      	mov	r2, r4
+  4002f2:	2104      	movs	r1, #4
+  4002f4:	4861      	ldr	r0, [pc, #388]	; (40047c <gmac_init+0x1b8>)
+  4002f6:	f000 f981 	bl	4005fc <set_pin_function>
+    set_pin_function(GPIOD,  5, PIN_FUNCTION_A);
+  4002fa:	4622      	mov	r2, r4
+  4002fc:	2105      	movs	r1, #5
+  4002fe:	485f      	ldr	r0, [pc, #380]	; (40047c <gmac_init+0x1b8>)
+  400300:	f000 f97c 	bl	4005fc <set_pin_function>
+    set_pin_function(GPIOD,  6, PIN_FUNCTION_A);
+  400304:	4622      	mov	r2, r4
+  400306:	2106      	movs	r1, #6
+  400308:	485c      	ldr	r0, [pc, #368]	; (40047c <gmac_init+0x1b8>)
+  40030a:	f000 f977 	bl	4005fc <set_pin_function>
+    set_pin_function(GPIOD,  7, PIN_FUNCTION_A);
+  40030e:	4622      	mov	r2, r4
+  400310:	2107      	movs	r1, #7
+  400312:	485a      	ldr	r0, [pc, #360]	; (40047c <gmac_init+0x1b8>)
+  400314:	f000 f972 	bl	4005fc <set_pin_function>
+    set_pin_function(GPIOD,  8, PIN_FUNCTION_A);
+  400318:	4622      	mov	r2, r4
+  40031a:	2108      	movs	r1, #8
+  40031c:	4857      	ldr	r0, [pc, #348]	; (40047c <gmac_init+0x1b8>)
+  40031e:	f000 f96d 	bl	4005fc <set_pin_function>
+    set_pin_function(GPIOD,  9, PIN_FUNCTION_A);
+  400322:	4622      	mov	r2, r4
+  400324:	2109      	movs	r1, #9
+  400326:	4855      	ldr	r0, [pc, #340]	; (40047c <gmac_init+0x1b8>)
+  400328:	f000 f968 	bl	4005fc <set_pin_function>
+    set_pin_function(GPIOD, 10, PIN_FUNCTION_A);
+  40032c:	4622      	mov	r2, r4
+  40032e:	210a      	movs	r1, #10
+  400330:	4852      	ldr	r0, [pc, #328]	; (40047c <gmac_init+0x1b8>)
+  400332:	f000 f963 	bl	4005fc <set_pin_function>
+    set_pin_function(GPIOD, 11, PIN_FUNCTION_A);
+  400336:	4622      	mov	r2, r4
+  400338:	210b      	movs	r1, #11
+  40033a:	4850      	ldr	r0, [pc, #320]	; (40047c <gmac_init+0x1b8>)
+  40033c:	f000 f95e 	bl	4005fc <set_pin_function>
+    set_pin_function(GPIOD, 12, PIN_FUNCTION_A);
+  400340:	4622      	mov	r2, r4
+  400342:	210c      	movs	r1, #12
+  400344:	484d      	ldr	r0, [pc, #308]	; (40047c <gmac_init+0x1b8>)
+  400346:	f000 f959 	bl	4005fc <set_pin_function>
+    set_pin_function(GPIOD, 13, PIN_FUNCTION_A);
+  40034a:	4622      	mov	r2, r4
+  40034c:	210d      	movs	r1, #13
+  40034e:	484b      	ldr	r0, [pc, #300]	; (40047c <gmac_init+0x1b8>)
+  400350:	f000 f954 	bl	4005fc <set_pin_function>
+    set_pin_function(GPIOD, 14, PIN_FUNCTION_A);
+  400354:	4622      	mov	r2, r4
+  400356:	210e      	movs	r1, #14
+  400358:	4848      	ldr	r0, [pc, #288]	; (40047c <gmac_init+0x1b8>)
+  40035a:	f000 f94f 	bl	4005fc <set_pin_function>
+    set_pin_function(GPIOD, 15, PIN_FUNCTION_A);
+  40035e:	4622      	mov	r2, r4
+  400360:	210f      	movs	r1, #15
+  400362:	4846      	ldr	r0, [pc, #280]	; (40047c <gmac_init+0x1b8>)
+  400364:	f000 f94a 	bl	4005fc <set_pin_function>
+    set_pin_function(GPIOD, 16, PIN_FUNCTION_A);
+  400368:	4e45      	ldr	r6, [pc, #276]	; (400480 <gmac_init+0x1bc>)
+  40036a:	4622      	mov	r2, r4
+  40036c:	2110      	movs	r1, #16
+  40036e:	4843      	ldr	r0, [pc, #268]	; (40047c <gmac_init+0x1b8>)
+  400370:	1d35      	adds	r5, r6, #4
+  400372:	f000 f943 	bl	4005fc <set_pin_function>
+    enable_peripheral_clock(44);
+  400376:	202c      	movs	r0, #44	; 0x2c
+  400378:	f000 f9cc 	bl	400714 <enable_peripheral_clock>
+    network_buffer_init();
+  40037c:	f000 f9e6 	bl	40074c <network_buffer_init>
+        tx_buffers[i] = allocate_network_buffer();
+  400380:	f000 fa08 	bl	400794 <allocate_network_buffer>
+  400384:	f846 0f04 	str.w	r0, [r6, #4]!
+        gmac_tx_descriptors[i].owner = OWNER_CPU;
+  400388:	eb05 02c4 	add.w	r2, r5, r4, lsl #3
+    for (int i = 0; i < TRANSMIT_DESCRIPTOR_COUNT; i++) {
+  40038c:	3401      	adds	r4, #1
+        gmac_tx_descriptors[i].owner = OWNER_CPU;
+  40038e:	6a53      	ldr	r3, [r2, #36]	; 0x24
+    for (int i = 0; i < TRANSMIT_DESCRIPTOR_COUNT; i++) {
+  400390:	2c08      	cmp	r4, #8
+        gmac_tx_descriptors[i].owner = OWNER_CPU;
+  400392:	f043 4300 	orr.w	r3, r3, #2147483648	; 0x80000000
+  400396:	6253      	str	r3, [r2, #36]	; 0x24
+    for (int i = 0; i < TRANSMIT_DESCRIPTOR_COUNT; i++) {
+  400398:	d1f2      	bne.n	400380 <gmac_init+0xbc>
+  40039a:	f105 065c 	add.w	r6, r5, #92	; 0x5c
+    }
+
+    for (int i = 0; i < RECEIVE_DESCRIPTOR_COUNT; i++) {
+  40039e:	2400      	movs	r4, #0
+        rx_buffers[i] = allocate_network_buffer();
+  4003a0:	f000 f9f8 	bl	400794 <allocate_network_buffer>
+  4003a4:	f846 0f04 	str.w	r0, [r6, #4]!
+        gmac_rx_descriptors[i].address = (u32)rx_buffers[i]->data >> 2;
+  4003a8:	eb05 03c4 	add.w	r3, r5, r4, lsl #3
+    for (int i = 0; i < RECEIVE_DESCRIPTOR_COUNT; i++) {
+  4003ac:	3401      	adds	r4, #1
+        gmac_rx_descriptors[i].address = (u32)rx_buffers[i]->data >> 2;
+  4003ae:	0881      	lsrs	r1, r0, #2
+  4003b0:	f8d3 2080 	ldr.w	r2, [r3, #128]	; 0x80
+    for (int i = 0; i < RECEIVE_DESCRIPTOR_COUNT; i++) {
+  4003b4:	2c08      	cmp	r4, #8
+        gmac_rx_descriptors[i].address = (u32)rx_buffers[i]->data >> 2;
+  4003b6:	f361 029f 	bfi	r2, r1, #2, #30
+  4003ba:	f8c3 2080 	str.w	r2, [r3, #128]	; 0x80
+    for (int i = 0; i < RECEIVE_DESCRIPTOR_COUNT; i++) {
+  4003be:	d1ef      	bne.n	4003a0 <gmac_init+0xdc>
+    }
+
+    gmac_tx_descriptors[TRANSMIT_DESCRIPTOR_COUNT - 1].wrap = 1;
+  4003c0:	6dea      	ldr	r2, [r5, #92]	; 0x5c
+    // Set the base address of the descriptor lists.
+    GMAC->TBQB = (u32)gmac_tx_descriptors;
+    GMAC->RBQB = (u32)gmac_rx_descriptors;
+
+    // Set the MDIO clock speed.
+    GMAC->NCFGR = 3 << 18;
+  4003c2:	f44f 2c40 	mov.w	ip, #786432	; 0xc0000
+    GMAC->TBQB = (u32)gmac_tx_descriptors;
+  4003c6:	492f      	ldr	r1, [pc, #188]	; (400484 <gmac_init+0x1c0>)
+
+    // Set MII mode.
+    GMAC->UR = 1 << 0;
+  4003c8:	2701      	movs	r7, #1
+    gmac_tx_descriptors[TRANSMIT_DESCRIPTOR_COUNT - 1].wrap = 1;
+  4003ca:	f042 4280 	orr.w	r2, r2, #1073741824	; 0x40000000
+    GMAC->TBQB = (u32)gmac_tx_descriptors;
+  4003ce:	4b2e      	ldr	r3, [pc, #184]	; (400488 <gmac_init+0x1c4>)
+    GMAC->RBQB = (u32)gmac_rx_descriptors;
+  4003d0:	f101 0e60 	add.w	lr, r1, #96	; 0x60
+
+    // Set the receive buffer size and DMA configuration;
+    GMAC->DCFGR = 4 << 0 | (NETWORK_BUFFER_SIZE / 64) << 16;
+  4003d4:	4e2d      	ldr	r6, [pc, #180]	; (40048c <gmac_init+0x1c8>)
+    gmac_tx_descriptors[TRANSMIT_DESCRIPTOR_COUNT - 1].wrap = 1;
+  4003d6:	65ea      	str	r2, [r5, #92]	; 0x5c
+
+    // Enable the receiver, transmitter and the MDIO interface.
+    GMAC->NCR = 1 << 2 | 1 << 3 | 1 << 4;
+  4003d8:	201c      	movs	r0, #28
+    gmac_rx_descriptors[RECEIVE_DESCRIPTOR_COUNT - 1].wrap = 1;
+  4003da:	f8d5 20b8 	ldr.w	r2, [r5, #184]	; 0xb8
+    while ((GMAC->NSR & (1 << 2)) == 0);
+  4003de:	461c      	mov	r4, r3
+    gmac_rx_descriptors[RECEIVE_DESCRIPTOR_COUNT - 1].wrap = 1;
+  4003e0:	f042 0202 	orr.w	r2, r2, #2
+  4003e4:	f8c5 20b8 	str.w	r2, [r5, #184]	; 0xb8
+    tx_index = 0;
+  4003e8:	2200      	movs	r2, #0
+    GMAC->TBQB = (u32)gmac_tx_descriptors;
+  4003ea:	61d9      	str	r1, [r3, #28]
+    GMAC->RBQB = (u32)gmac_rx_descriptors;
+  4003ec:	f8c3 e018 	str.w	lr, [r3, #24]
+    GMAC->NCFGR = 3 << 18;
+  4003f0:	f8c3 c004 	str.w	ip, [r3, #4]
+    tx_index = 0;
+  4003f4:	f8c5 20c0 	str.w	r2, [r5, #192]	; 0xc0
+    GMAC->UR = 1 << 0;
+  4003f8:	60df      	str	r7, [r3, #12]
+    rx_index = 0;
+  4003fa:	f8c5 20c4 	str.w	r2, [r5, #196]	; 0xc4
+    GMAC->MAN = 1 << 30 | 1 << 29 | phy_address << 23 | register_address << 18 | 1 << 17;
+  4003fe:	4a24      	ldr	r2, [pc, #144]	; (400490 <gmac_init+0x1cc>)
+    GMAC->DCFGR = 4 << 0 | (NETWORK_BUFFER_SIZE / 64) << 16;
+  400400:	611e      	str	r6, [r3, #16]
+    GMAC->NCR = 1 << 2 | 1 << 3 | 1 << 4;
+  400402:	6018      	str	r0, [r3, #0]
+    GMAC->MAN = 1 << 30 | 1 << 29 | phy_address << 23 | register_address << 18 | 1 << 17;
+  400404:	635a      	str	r2, [r3, #52]	; 0x34
+    while ((GMAC->NSR & (1 << 2)) == 0);
+  400406:	68a3      	ldr	r3, [r4, #8]
+  400408:	0759      	lsls	r1, r3, #29
+  40040a:	d5fc      	bpl.n	400406 <gmac_init+0x142>
+    return (u16)GMAC->MAN;
+  40040c:	6b63      	ldr	r3, [r4, #52]	; 0x34
+    if (link_status_register & (0b11 << 7)) {
+  40040e:	f413 7fc0 	tst.w	r3, #384	; 0x180
+  400412:	d011      	beq.n	400438 <gmac_init+0x174>
+        if (link_status_register & (1 << 8)) {
+  400414:	05da      	lsls	r2, r3, #23
+  400416:	d529      	bpl.n	40046c <gmac_init+0x1a8>
+        print("Full speed\n");
+  400418:	481e      	ldr	r0, [pc, #120]	; (400494 <gmac_init+0x1d0>)
+  40041a:	f7ff ff11 	bl	400240 <print>
+        GMAC->NCFGR |= 1 << 0;
+  40041e:	6863      	ldr	r3, [r4, #4]
+  400420:	f043 0301 	orr.w	r3, r3, #1
+  400424:	6063      	str	r3, [r4, #4]
+        print("Full duplex\n");
+  400426:	481c      	ldr	r0, [pc, #112]	; (400498 <gmac_init+0x1d4>)
+  400428:	f7ff ff0a 	bl	400240 <print>
+        GMAC->NCFGR |= 1 << 1;
+  40042c:	4a16      	ldr	r2, [pc, #88]	; (400488 <gmac_init+0x1c4>)
+  40042e:	6853      	ldr	r3, [r2, #4]
+  400430:	f043 0302 	orr.w	r3, r3, #2
+  400434:	6053      	str	r3, [r2, #4]
+    // @Incomplete: Do we need to configure the capabilities first?
+
+    // If the network cable is plugged in during startup, we don't get any interrupt from the PHY.
+    // We manually check the status of the PHY at startup. 
+    update_link_settings();
+}
+  400436:	bdf8      	pop	{r3, r4, r5, r6, r7, pc}
+    else if ((link_status_register & (0b11 << 5)) && (link_status_register & (1 << 6))) {
+  400438:	f013 0f60 	tst.w	r3, #96	; 0x60
+  40043c:	d10c      	bne.n	400458 <gmac_init+0x194>
+        print("Half speed\n");
+  40043e:	4817      	ldr	r0, [pc, #92]	; (40049c <gmac_init+0x1d8>)
+  400440:	f7ff fefe 	bl	400240 <print>
+        GMAC->NCFGR &= ~(1 << 0);
+  400444:	6863      	ldr	r3, [r4, #4]
+  400446:	f023 0301 	bic.w	r3, r3, #1
+  40044a:	6063      	str	r3, [r4, #4]
+        GMAC->NCFGR &= ~(1 << 1);
+  40044c:	4a0e      	ldr	r2, [pc, #56]	; (400488 <gmac_init+0x1c4>)
+  40044e:	6853      	ldr	r3, [r2, #4]
+  400450:	f023 0302 	bic.w	r3, r3, #2
+  400454:	6053      	str	r3, [r2, #4]
+}
+  400456:	bdf8      	pop	{r3, r4, r5, r6, r7, pc}
+    else if ((link_status_register & (0b11 << 5)) && (link_status_register & (1 << 6))) {
+  400458:	065b      	lsls	r3, r3, #25
+  40045a:	d5f0      	bpl.n	40043e <gmac_init+0x17a>
+        print("Half speed\n");
+  40045c:	480f      	ldr	r0, [pc, #60]	; (40049c <gmac_init+0x1d8>)
+  40045e:	f7ff feef 	bl	400240 <print>
+        GMAC->NCFGR &= ~(1 << 0);
+  400462:	6863      	ldr	r3, [r4, #4]
+  400464:	f023 0301 	bic.w	r3, r3, #1
+  400468:	6063      	str	r3, [r4, #4]
+    if (full_duplex) {
+  40046a:	e7dc      	b.n	400426 <gmac_init+0x162>
+        print("Full speed\n");
+  40046c:	4809      	ldr	r0, [pc, #36]	; (400494 <gmac_init+0x1d0>)
+  40046e:	f7ff fee7 	bl	400240 <print>
+        GMAC->NCFGR |= 1 << 0;
+  400472:	6863      	ldr	r3, [r4, #4]
+  400474:	f043 0301 	orr.w	r3, r3, #1
+  400478:	6063      	str	r3, [r4, #4]
+    if (full_duplex) {
+  40047a:	e7e7      	b.n	40044c <gmac_init+0x188>
+  40047c:	400e1400 	.word	0x400e1400
+  400480:	1ffffffc 	.word	0x1ffffffc
+  400484:	20000020 	.word	0x20000020
+  400488:	40034000 	.word	0x40034000
+  40048c:	00100004 	.word	0x00100004
+  400490:	60160000 	.word	0x60160000
+  400494:	004008b4 	.word	0x004008b4
+  400498:	004008cc 	.word	0x004008cc
+  40049c:	004008c0 	.word	0x004008c0
+
+004004a0 <gmac_link_is_up>:
+
+//--------------------------------------------------------------------------------------------------
+
+bool gmac_link_is_up() {
+    return link_up;
+  4004a0:	4b01      	ldr	r3, [pc, #4]	; (4004a8 <gmac_link_is_up+0x8>)
+  4004a2:	f893 00c8 	ldrb.w	r0, [r3, #200]	; 0xc8
+}
+  4004a6:	4770      	bx	lr
+  4004a8:	20000000 	.word	0x20000000
+
+004004ac <gmac_send>:
+
+//--------------------------------------------------------------------------------------------------
+
+void gmac_send(NetworkBuffer* buffer) {
+  4004ac:	b570      	push	{r4, r5, r6, lr}
+    volatile TxDescriptor* descriptor = &gmac_tx_descriptors[tx_index];
+  4004ae:	4e21      	ldr	r6, [pc, #132]	; (400534 <gmac_send+0x88>)
+
+    if (GMAC->TSR & (1 << 8 | 1 << 4 | 1 << 2)) {
+  4004b0:	4b21      	ldr	r3, [pc, #132]	; (400538 <gmac_send+0x8c>)
+    volatile TxDescriptor* descriptor = &gmac_tx_descriptors[tx_index];
+  4004b2:	f8d6 20c0 	ldr.w	r2, [r6, #192]	; 0xc0
+    if (GMAC->TSR & (1 << 8 | 1 << 4 | 1 << 2)) {
+  4004b6:	6959      	ldr	r1, [r3, #20]
+
+    // Clear the transmit status.
+    GMAC->TSR = GMAC->TSR;
+
+    // If the network is saturated, just drop the packet.
+    if (descriptor->owner == OWNER_GMAC) {
+  4004b8:	eb06 04c2 	add.w	r4, r6, r2, lsl #3
+    GMAC->TSR = GMAC->TSR;
+  4004bc:	6959      	ldr	r1, [r3, #20]
+  4004be:	6159      	str	r1, [r3, #20]
+    if (descriptor->owner == OWNER_GMAC) {
+  4004c0:	6a63      	ldr	r3, [r4, #36]	; 0x24
+  4004c2:	2b00      	cmp	r3, #0
+  4004c4:	da2e      	bge.n	400524 <gmac_send+0x78>
+        free_network_buffer(buffer);
+        print("Error\n");
+        return;
+    }
+
+    free_network_buffer(tx_buffers[tx_index]);
+  4004c6:	4605      	mov	r5, r0
+  4004c8:	f856 0022 	ldr.w	r0, [r6, r2, lsl #2]
+  4004cc:	f000 f982 	bl	4007d4 <free_network_buffer>
+    tx_buffers[tx_index] = buffer;
+  4004d0:	f8d6 30c0 	ldr.w	r3, [r6, #192]	; 0xc0
+
+    // Map in the new buffer.
+    descriptor->address = (u32)&buffer->data[buffer->index];
+  4004d4:	f8d5 2404 	ldr.w	r2, [r5, #1028]	; 0x404
+    tx_buffers[tx_index] = buffer;
+  4004d8:	f846 5023 	str.w	r5, [r6, r3, lsl #2]
+    descriptor->length = buffer->length;
+    descriptor->last_buffer = 1;
+    descriptor->ignore_crc = 0;
+    descriptor->owner = OWNER_GMAC;
+
+    if (++tx_index == TRANSMIT_DESCRIPTOR_COUNT) {
+  4004dc:	2b07      	cmp	r3, #7
+    descriptor->address = (u32)&buffer->data[buffer->index];
+  4004de:	442a      	add	r2, r5
+    descriptor->length = buffer->length;
+  4004e0:	f8d5 1400 	ldr.w	r1, [r5, #1024]	; 0x400
+    if (++tx_index == TRANSMIT_DESCRIPTOR_COUNT) {
+  4004e4:	f103 0001 	add.w	r0, r3, #1
+    descriptor->address = (u32)&buffer->data[buffer->index];
+  4004e8:	6222      	str	r2, [r4, #32]
+    descriptor->length = buffer->length;
+  4004ea:	6a62      	ldr	r2, [r4, #36]	; 0x24
+  4004ec:	f361 020d 	bfi	r2, r1, #0, #14
+  4004f0:	6262      	str	r2, [r4, #36]	; 0x24
+    descriptor->last_buffer = 1;
+  4004f2:	6a62      	ldr	r2, [r4, #36]	; 0x24
+  4004f4:	f442 4200 	orr.w	r2, r2, #32768	; 0x8000
+  4004f8:	6262      	str	r2, [r4, #36]	; 0x24
+    descriptor->ignore_crc = 0;
+  4004fa:	6a62      	ldr	r2, [r4, #36]	; 0x24
+  4004fc:	f36f 4210 	bfc	r2, #16, #1
+  400500:	6262      	str	r2, [r4, #36]	; 0x24
+    descriptor->owner = OWNER_GMAC;
+  400502:	6a62      	ldr	r2, [r4, #36]	; 0x24
+  400504:	f36f 72df 	bfc	r2, #31, #1
+  400508:	6262      	str	r2, [r4, #36]	; 0x24
+    if (++tx_index == TRANSMIT_DESCRIPTOR_COUNT) {
+  40050a:	d007      	beq.n	40051c <gmac_send+0x70>
+  40050c:	f8c6 00c0 	str.w	r0, [r6, #192]	; 0xc0
+        tx_index = 0;
+    }
+
+    // Start the transfer if not already started.
+    GMAC->NCR |= 1 << 9;
+  400510:	4a09      	ldr	r2, [pc, #36]	; (400538 <gmac_send+0x8c>)
+  400512:	6813      	ldr	r3, [r2, #0]
+  400514:	f443 7300 	orr.w	r3, r3, #512	; 0x200
+  400518:	6013      	str	r3, [r2, #0]
+}
+  40051a:	bd70      	pop	{r4, r5, r6, pc}
+        tx_index = 0;
+  40051c:	2300      	movs	r3, #0
+  40051e:	f8c6 30c0 	str.w	r3, [r6, #192]	; 0xc0
+  400522:	e7f5      	b.n	400510 <gmac_send+0x64>
+        free_network_buffer(buffer);
+  400524:	f000 f956 	bl	4007d4 <free_network_buffer>
+        print("Error\n");
+  400528:	4804      	ldr	r0, [pc, #16]	; (40053c <gmac_send+0x90>)
+}
+  40052a:	e8bd 4070 	ldmia.w	sp!, {r4, r5, r6, lr}
+        print("Error\n");
+  40052e:	f7ff be87 	b.w	400240 <print>
+  400532:	bf00      	nop
+  400534:	20000000 	.word	0x20000000
+  400538:	40034000 	.word	0x40034000
+  40053c:	004008dc 	.word	0x004008dc
+
+00400540 <gmac_receive>:
+
+//--------------------------------------------------------------------------------------------------
+
+NetworkBuffer* gmac_receive() {
+  400540:	e92d 41f0 	stmdb	sp!, {r4, r5, r6, r7, r8, lr}
+    volatile RxDescriptor* descriptor = &gmac_rx_descriptors[rx_index];
+  400544:	4f2a      	ldr	r7, [pc, #168]	; (4005f0 <gmac_receive+0xb0>)
+  400546:	f8d7 50c4 	ldr.w	r5, [r7, #196]	; 0xc4
+
+    if (descriptor->owner == OWNER_GMAC) {
+  40054a:	eb07 06c5 	add.w	r6, r7, r5, lsl #3
+  40054e:	f8d6 4080 	ldr.w	r4, [r6, #128]	; 0x80
+  400552:	f014 0401 	ands.w	r4, r4, #1
+  400556:	d03c      	beq.n	4005d2 <gmac_receive+0x92>
+        return 0;
+    }
+
+    print("Got a packet\n");
+  400558:	4826      	ldr	r0, [pc, #152]	; (4005f4 <gmac_receive+0xb4>)
+  40055a:	00ed      	lsls	r5, r5, #3
+  40055c:	f7ff fe70 	bl	400240 <print>
+
+    // If the network buffer size is smaller than the MTU, the GMAC will split the packet. In this
+    // case we just drop the packet.
+    if (descriptor->start_of_frame == 0 || descriptor->end_of_frame == 0) {
+  400560:	f8d6 3084 	ldr.w	r3, [r6, #132]	; 0x84
+  400564:	045a      	lsls	r2, r3, #17
+  400566:	d537      	bpl.n	4005d8 <gmac_receive+0x98>
+  400568:	f8d6 3084 	ldr.w	r3, [r6, #132]	; 0x84
+  40056c:	041b      	lsls	r3, r3, #16
+  40056e:	d533      	bpl.n	4005d8 <gmac_receive+0x98>
+        descriptor->owner = OWNER_GMAC;
+        return 0;
+    }
+
+    NetworkBuffer* buffer = rx_buffers[rx_index];
+  400570:	f8d7 50c4 	ldr.w	r5, [r7, #196]	; 0xc4
+
+    // Update the buffer metadata.
+    buffer->length = descriptor->length;
+    buffer->index = 0;
+  400574:	f04f 0800 	mov.w	r8, #0
+    buffer->length = descriptor->length;
+  400578:	f8d6 3084 	ldr.w	r3, [r6, #132]	; 0x84
+    NetworkBuffer* buffer = rx_buffers[rx_index];
+  40057c:	eb07 0585 	add.w	r5, r7, r5, lsl #2
+    buffer->length = descriptor->length;
+  400580:	f3c3 030c 	ubfx	r3, r3, #0, #13
+    NetworkBuffer* buffer = rx_buffers[rx_index];
+  400584:	6e2c      	ldr	r4, [r5, #96]	; 0x60
+    buffer->length = descriptor->length;
+  400586:	f8c4 3400 	str.w	r3, [r4, #1024]	; 0x400
+    buffer->index = 0;
+  40058a:	f8c4 8404 	str.w	r8, [r4, #1028]	; 0x404
+    buffer->broadcast = descriptor->broadcast_detected == 1;
+  40058e:	f8d6 3084 	ldr.w	r3, [r6, #132]	; 0x84
+  400592:	f3c3 73c0 	ubfx	r3, r3, #31, #1
+  400596:	f884 3408 	strb.w	r3, [r4, #1032]	; 0x408
+
+    rx_buffers[rx_index] = allocate_network_buffer();
+  40059a:	f000 f8fb 	bl	400794 <allocate_network_buffer>
+
+    descriptor->address = (u32)rx_buffers[rx_index]->data >> 2;
+  40059e:	f8d7 30c4 	ldr.w	r3, [r7, #196]	; 0xc4
+    rx_buffers[rx_index] = allocate_network_buffer();
+  4005a2:	6628      	str	r0, [r5, #96]	; 0x60
+    descriptor->address = (u32)rx_buffers[rx_index]->data >> 2;
+  4005a4:	eb07 0283 	add.w	r2, r7, r3, lsl #2
+  4005a8:	f8d6 1080 	ldr.w	r1, [r6, #128]	; 0x80
+    descriptor->owner = OWNER_GMAC;
+
+    if (++rx_index == RECEIVE_DESCRIPTOR_COUNT) {
+  4005ac:	2b07      	cmp	r3, #7
+  4005ae:	f103 0301 	add.w	r3, r3, #1
+    descriptor->address = (u32)rx_buffers[rx_index]->data >> 2;
+  4005b2:	6e12      	ldr	r2, [r2, #96]	; 0x60
+    if (++rx_index == RECEIVE_DESCRIPTOR_COUNT) {
+  4005b4:	bf08      	it	eq
+  4005b6:	4643      	moveq	r3, r8
+    descriptor->address = (u32)rx_buffers[rx_index]->data >> 2;
+  4005b8:	0892      	lsrs	r2, r2, #2
+  4005ba:	f362 019f 	bfi	r1, r2, #2, #30
+  4005be:	f8c6 1080 	str.w	r1, [r6, #128]	; 0x80
+    descriptor->owner = OWNER_GMAC;
+  4005c2:	f8d6 2080 	ldr.w	r2, [r6, #128]	; 0x80
+  4005c6:	f368 0200 	bfi	r2, r8, #0, #1
+  4005ca:	f8c6 2080 	str.w	r2, [r6, #128]	; 0x80
+    if (++rx_index == RECEIVE_DESCRIPTOR_COUNT) {
+  4005ce:	f8c7 30c4 	str.w	r3, [r7, #196]	; 0xc4
+        rx_index = 0;
+    }
+
+    return buffer;
+}
+  4005d2:	4620      	mov	r0, r4
+  4005d4:	e8bd 81f0 	ldmia.w	sp!, {r4, r5, r6, r7, r8, pc}
+        descriptor->owner = OWNER_GMAC;
+  4005d8:	197b      	adds	r3, r7, r5
+        return 0;
+  4005da:	2400      	movs	r4, #0
+        descriptor->owner = OWNER_GMAC;
+  4005dc:	f8d3 2080 	ldr.w	r2, [r3, #128]	; 0x80
+}
+  4005e0:	4620      	mov	r0, r4
+        descriptor->owner = OWNER_GMAC;
+  4005e2:	f36f 0200 	bfc	r2, #0, #1
+  4005e6:	f8c3 2080 	str.w	r2, [r3, #128]	; 0x80
+}
+  4005ea:	e8bd 81f0 	ldmia.w	sp!, {r4, r5, r6, r7, r8, pc}
+  4005ee:	bf00      	nop
+  4005f0:	20000000 	.word	0x20000000
+  4005f4:	004008e4 	.word	0x004008e4
+
+004005f8 <time_init>:
+
+//--------------------------------------------------------------------------------------------------
+
+void time_init() {
+    
+}
+  4005f8:	4770      	bx	lr
+  4005fa:	bf00      	nop
+
+004005fc <set_pin_function>:
+
+//--------------------------------------------------------------------------------------------------
+
+void set_pin_function(GpioHardware* gpio, int pin, int function) {
+    // Re-map the pin if it's a system IO.
+    if (gpio == GPIOB) {
+  4005fc:	4b1d      	ldr	r3, [pc, #116]	; (400674 <set_pin_function+0x78>)
+  4005fe:	4298      	cmp	r0, r3
+  400600:	d015      	beq.n	40062e <set_pin_function+0x32>
+  400602:	2301      	movs	r3, #1
+  400604:	fa03 f101 	lsl.w	r1, r3, r1
+            *(volatile u32 *)0x400E0314 |= 1 << pin;
+        }
+    }
+
+    // Disable the GPIO controller from controlling the pin.
+    gpio->PDR = 1 << pin;
+  400608:	6041      	str	r1, [r0, #4]
+    while (gpio->PSR & (1 << pin));
+  40060a:	6883      	ldr	r3, [r0, #8]
+  40060c:	420b      	tst	r3, r1
+  40060e:	d1fc      	bne.n	40060a <set_pin_function+0xe>
+    
+    // Set the peripheral function.
+    if (function & 0b01) {
+        gpio->ABCDSR1 |= 1 << pin;
+  400610:	6f03      	ldr	r3, [r0, #112]	; 0x70
+    if (function & 0b01) {
+  400612:	f012 0f01 	tst.w	r2, #1
+        gpio->ABCDSR1 |= 1 << pin;
+  400616:	bf14      	ite	ne
+  400618:	430b      	orrne	r3, r1
+    }
+    else {
+        gpio->ABCDSR1 &= ~(1 << pin);
+  40061a:	438b      	biceq	r3, r1
+    }
+
+    if (function & 0b10) {
+  40061c:	0792      	lsls	r2, r2, #30
+        gpio->ABCDSR1 &= ~(1 << pin);
+  40061e:	6703      	str	r3, [r0, #112]	; 0x70
+        gpio->ABCDSR2 |= 1 << pin;
+  400620:	6f43      	ldr	r3, [r0, #116]	; 0x74
+  400622:	bf4c      	ite	mi
+  400624:	4319      	orrmi	r1, r3
+    }
+    else {
+        gpio->ABCDSR2 &= ~(1 << pin);
+  400626:	ea23 0101 	bicpl.w	r1, r3, r1
+  40062a:	6741      	str	r1, [r0, #116]	; 0x74
+  40062c:	4770      	bx	lr
+        if (pin == 4 || pin == 5 || pin == 6 || pin == 7 || pin == 11 || pin == 12) {
+  40062e:	1f0b      	subs	r3, r1, #4
+  400630:	2b03      	cmp	r3, #3
+  400632:	d903      	bls.n	40063c <set_pin_function+0x40>
+  400634:	f1a1 030b 	sub.w	r3, r1, #11
+  400638:	2b01      	cmp	r3, #1
+  40063a:	d8e2      	bhi.n	400602 <set_pin_function+0x6>
+void set_pin_function(GpioHardware* gpio, int pin, int function) {
+  40063c:	b430      	push	{r4, r5}
+            *(volatile u32 *)0x400E0314 |= 1 << pin;
+  40063e:	4c0e      	ldr	r4, [pc, #56]	; (400678 <set_pin_function+0x7c>)
+  400640:	2501      	movs	r5, #1
+  400642:	6823      	ldr	r3, [r4, #0]
+  400644:	fa05 f101 	lsl.w	r1, r5, r1
+  400648:	430b      	orrs	r3, r1
+  40064a:	6023      	str	r3, [r4, #0]
+    gpio->PDR = 1 << pin;
+  40064c:	6041      	str	r1, [r0, #4]
+    while (gpio->PSR & (1 << pin));
+  40064e:	6883      	ldr	r3, [r0, #8]
+  400650:	420b      	tst	r3, r1
+  400652:	d1fc      	bne.n	40064e <set_pin_function+0x52>
+        gpio->ABCDSR1 |= 1 << pin;
+  400654:	6f03      	ldr	r3, [r0, #112]	; 0x70
+    if (function & 0b01) {
+  400656:	07d4      	lsls	r4, r2, #31
+        gpio->ABCDSR1 |= 1 << pin;
+  400658:	bf4c      	ite	mi
+  40065a:	430b      	orrmi	r3, r1
+        gpio->ABCDSR1 &= ~(1 << pin);
+  40065c:	438b      	bicpl	r3, r1
+    if (function & 0b10) {
+  40065e:	0792      	lsls	r2, r2, #30
+        gpio->ABCDSR1 &= ~(1 << pin);
+  400660:	6703      	str	r3, [r0, #112]	; 0x70
+        gpio->ABCDSR2 |= 1 << pin;
+  400662:	6f43      	ldr	r3, [r0, #116]	; 0x74
+  400664:	bf4c      	ite	mi
+  400666:	4319      	orrmi	r1, r3
+        gpio->ABCDSR2 &= ~(1 << pin);
+  400668:	ea23 0101 	bicpl.w	r1, r3, r1
+    }
+}
+  40066c:	bc30      	pop	{r4, r5}
+        gpio->ABCDSR2 &= ~(1 << pin);
+  40066e:	6741      	str	r1, [r0, #116]	; 0x74
+}
+  400670:	4770      	bx	lr
+  400672:	bf00      	nop
+  400674:	400e1000 	.word	0x400e1000
+  400678:	400e0314 	.word	0x400e0314
+
+0040067c <clock_init>:
+#include "clock.h"
+#include "registers.h"
+
+//--------------------------------------------------------------------------------------------------
+
+void clock_init() {
+  40067c:	b410      	push	{r4}
+    // Use 6 cycles for flash read and write operations.
+    FLASH->FMR = (FLASH->FMR & ~(0xf << 8)) | (5 << 8);
+  40067e:	4c1f      	ldr	r4, [pc, #124]	; (4006fc <clock_init+0x80>)
+
+    // Enable the RC oscillator.
+    PMC->MOR |= (1 << 3) | 0x370000;
+  400680:	4a1f      	ldr	r2, [pc, #124]	; (400700 <clock_init+0x84>)
+    FLASH->FMR = (FLASH->FMR & ~(0xf << 8)) | (5 << 8);
+  400682:	6823      	ldr	r3, [r4, #0]
+    PMC->MOR |= (1 << 3) | 0x370000;
+  400684:	481f      	ldr	r0, [pc, #124]	; (400704 <clock_init+0x88>)
+    while ((PMC->SR & (1 << 17)) == 0);
+  400686:	4611      	mov	r1, r2
+    FLASH->FMR = (FLASH->FMR & ~(0xf << 8)) | (5 << 8);
+  400688:	f423 6370 	bic.w	r3, r3, #3840	; 0xf00
+  40068c:	f443 63a0 	orr.w	r3, r3, #1280	; 0x500
+  400690:	6023      	str	r3, [r4, #0]
+    PMC->MOR |= (1 << 3) | 0x370000;
+  400692:	6a13      	ldr	r3, [r2, #32]
+  400694:	4318      	orrs	r0, r3
+  400696:	6210      	str	r0, [r2, #32]
+    while ((PMC->SR & (1 << 17)) == 0);
+  400698:	6e8b      	ldr	r3, [r1, #104]	; 0x68
+  40069a:	039a      	lsls	r2, r3, #14
+  40069c:	d5fc      	bpl.n	400698 <clock_init+0x1c>
+
+    // Set the RC frequency to 12 MHz.
+    PMC->MOR |= (2 << 4) | 0x370000;
+  40069e:	6a08      	ldr	r0, [r1, #32]
+  4006a0:	4b19      	ldr	r3, [pc, #100]	; (400708 <clock_init+0x8c>)
+    while ((PMC->SR & (1 << 17)) == 0);
+  4006a2:	4a17      	ldr	r2, [pc, #92]	; (400700 <clock_init+0x84>)
+    PMC->MOR |= (2 << 4) | 0x370000;
+  4006a4:	4303      	orrs	r3, r0
+  4006a6:	620b      	str	r3, [r1, #32]
+    while ((PMC->SR & (1 << 17)) == 0);
+  4006a8:	6e93      	ldr	r3, [r2, #104]	; 0x68
+  4006aa:	039b      	lsls	r3, r3, #14
+  4006ac:	d5fc      	bpl.n	4006a8 <clock_init+0x2c>
+
+    // RC is the input to the main clock.
+    PMC->MOR = (PMC->MOR & ~(1 << 24)) | 0x370000;
+  4006ae:	6a11      	ldr	r1, [r2, #32]
+  4006b0:	4b16      	ldr	r3, [pc, #88]	; (40070c <clock_init+0x90>)
+    while ((PMC->SR & (1 << 16)) == 0);
+  4006b2:	4813      	ldr	r0, [pc, #76]	; (400700 <clock_init+0x84>)
+    PMC->MOR = (PMC->MOR & ~(1 << 24)) | 0x370000;
+  4006b4:	400b      	ands	r3, r1
+  4006b6:	f443 135c 	orr.w	r3, r3, #3604480	; 0x370000
+  4006ba:	6213      	str	r3, [r2, #32]
+    while ((PMC->SR & (1 << 16)) == 0);
+  4006bc:	6e83      	ldr	r3, [r0, #104]	; 0x68
+  4006be:	03dc      	lsls	r4, r3, #15
+  4006c0:	d5fc      	bpl.n	4006bc <clock_init+0x40>
+
+    // Start the PLL and set it to output 240 MHz.
+    u32 multiplication = 20;
+    u32 division       = 1;
+
+    PMC->PLLAR = (1 << 29) | ((multiplication - 1) << 16) | (0b111111 << 8) | division;
+  4006c2:	4b13      	ldr	r3, [pc, #76]	; (400710 <clock_init+0x94>)
+    while ((PMC->SR & (1 << 1)) == 0);
+  4006c4:	490e      	ldr	r1, [pc, #56]	; (400700 <clock_init+0x84>)
+    PMC->PLLAR = (1 << 29) | ((multiplication - 1) << 16) | (0b111111 << 8) | division;
+  4006c6:	6283      	str	r3, [r0, #40]	; 0x28
+    while ((PMC->SR & (1 << 1)) == 0);
+  4006c8:	6e8b      	ldr	r3, [r1, #104]	; 0x68
+  4006ca:	0798      	lsls	r0, r3, #30
+  4006cc:	d5fc      	bpl.n	4006c8 <clock_init+0x4c>
+
+    // Configure the master clock. The input is the PLL.
+    u32 data = PMC->MCKR & ~(0b111 << 4);
+  4006ce:	6b0b      	ldr	r3, [r1, #48]	; 0x30
+    PMC->MCKR = data | (1 << 4);
+    while ((PMC->SR & (1 << 3)) == 0);
+  4006d0:	4a0b      	ldr	r2, [pc, #44]	; (400700 <clock_init+0x84>)
+    u32 data = PMC->MCKR & ~(0b111 << 4);
+  4006d2:	f023 0370 	bic.w	r3, r3, #112	; 0x70
+    PMC->MCKR = data | (1 << 4);
+  4006d6:	f043 0310 	orr.w	r3, r3, #16
+  4006da:	630b      	str	r3, [r1, #48]	; 0x30
+    while ((PMC->SR & (1 << 3)) == 0);
+  4006dc:	6e93      	ldr	r3, [r2, #104]	; 0x68
+  4006de:	0719      	lsls	r1, r3, #28
+  4006e0:	d5fc      	bpl.n	4006dc <clock_init+0x60>
+
+    data = PMC->MCKR & ~(0b11 << 0);
+  4006e2:	6b13      	ldr	r3, [r2, #48]	; 0x30
+    PMC->MCKR = data | (2 << 0);
+    while ((PMC->SR & (1 << 3)) == 0);
+  4006e4:	4906      	ldr	r1, [pc, #24]	; (400700 <clock_init+0x84>)
+    data = PMC->MCKR & ~(0b11 << 0);
+  4006e6:	f023 0303 	bic.w	r3, r3, #3
+    PMC->MCKR = data | (2 << 0);
+  4006ea:	f043 0302 	orr.w	r3, r3, #2
+  4006ee:	6313      	str	r3, [r2, #48]	; 0x30
+    while ((PMC->SR & (1 << 3)) == 0);
+  4006f0:	6e8b      	ldr	r3, [r1, #104]	; 0x68
+  4006f2:	071b      	lsls	r3, r3, #28
+  4006f4:	d5fc      	bpl.n	4006f0 <clock_init+0x74>
+}
+  4006f6:	bc10      	pop	{r4}
+  4006f8:	4770      	bx	lr
+  4006fa:	bf00      	nop
+  4006fc:	400e0a00 	.word	0x400e0a00
+  400700:	400e0400 	.word	0x400e0400
+  400704:	00370008 	.word	0x00370008
+  400708:	00370020 	.word	0x00370020
+  40070c:	fec8ffff 	.word	0xfec8ffff
+  400710:	20133f01 	.word	0x20133f01
+
+00400714 <enable_peripheral_clock>:
+
+//--------------------------------------------------------------------------------------------------
+
+void enable_peripheral_clock(int id) {
+    if (id < 32) {
+  400714:	281f      	cmp	r0, #31
+  400716:	dc0b      	bgt.n	400730 <enable_peripheral_clock+0x1c>
+        PMC->PCER0 = 1 << id;
+  400718:	2301      	movs	r3, #1
+void enable_peripheral_clock(int id) {
+  40071a:	b410      	push	{r4}
+        PMC->PCER0 = 1 << id;
+  40071c:	4c0a      	ldr	r4, [pc, #40]	; (400748 <enable_peripheral_clock+0x34>)
+  40071e:	fa03 f000 	lsl.w	r0, r3, r0
+        while ((PMC->PCSR0 & (1 << id)) == 0);
+  400722:	4621      	mov	r1, r4
+        PMC->PCER0 = 1 << id;
+  400724:	6120      	str	r0, [r4, #16]
+        while ((PMC->PCSR0 & (1 << id)) == 0);
+  400726:	698b      	ldr	r3, [r1, #24]
+  400728:	4218      	tst	r0, r3
+  40072a:	d0fc      	beq.n	400726 <enable_peripheral_clock+0x12>
+    else {
+        id -= 32;
+        PMC->PCER1 = 1 << id;
+        while ((PMC->PCSR1 & (1 << id)) == 0);
+    }
+}
+  40072c:	bc10      	pop	{r4}
+  40072e:	4770      	bx	lr
+        PMC->PCER1 = 1 << id;
+  400730:	4b05      	ldr	r3, [pc, #20]	; (400748 <enable_peripheral_clock+0x34>)
+        id -= 32;
+  400732:	3820      	subs	r0, #32
+        PMC->PCER1 = 1 << id;
+  400734:	2201      	movs	r2, #1
+        while ((PMC->PCSR1 & (1 << id)) == 0);
+  400736:	4619      	mov	r1, r3
+        PMC->PCER1 = 1 << id;
+  400738:	4082      	lsls	r2, r0
+  40073a:	f8c3 2100 	str.w	r2, [r3, #256]	; 0x100
+        while ((PMC->PCSR1 & (1 << id)) == 0);
+  40073e:	f8d1 3108 	ldr.w	r3, [r1, #264]	; 0x108
+  400742:	421a      	tst	r2, r3
+  400744:	d0fb      	beq.n	40073e <enable_peripheral_clock+0x2a>
+  400746:	4770      	bx	lr
+  400748:	400e0400 	.word	0x400e0400
+
+0040074c <network_buffer_init>:
+
+//--------------------------------------------------------------------------------------------------
+
+static inline void list_init(List* list) {
+    list->previous = list;
+    list->next = list;
+  40074c:	480d      	ldr	r0, [pc, #52]	; (400784 <network_buffer_init+0x38>)
+  40074e:	4a0e      	ldr	r2, [pc, #56]	; (400788 <network_buffer_init+0x3c>)
+  400750:	490e      	ldr	r1, [pc, #56]	; (40078c <network_buffer_init+0x40>)
+  400752:	4613      	mov	r3, r2
+static int network_buffer_count;
+
+//--------------------------------------------------------------------------------------------------
+
+// Called from the GMAC init since it relies on allocating packets.
+void network_buffer_init() {
+  400754:	b430      	push	{r4, r5}
+  400756:	4605      	mov	r5, r0
+  400758:	6000      	str	r0, [r0, #0]
+    list_init(&network_buffer_list);
+
+    for (int i = 0; i < NETWORK_BUFFER_COUNT; i++) {
+        list_add_last(&network_buffers[i].list_node, &network_buffer_list);
+  40075a:	4604      	mov	r4, r0
+}
+
+//--------------------------------------------------------------------------------------------------
+
+static inline void list_add_last(ListNode* node, List* list) {
+    node->next = list;
+  40075c:	601d      	str	r5, [r3, #0]
+  40075e:	4618      	mov	r0, r3
+    node->previous = list->previous;
+    list->previous->next = node;
+  400760:	6023      	str	r3, [r4, #0]
+    for (int i = 0; i < NETWORK_BUFFER_COUNT; i++) {
+  400762:	f203 4314 	addw	r3, r3, #1044	; 0x414
+  400766:	428b      	cmp	r3, r1
+  400768:	d1f7      	bne.n	40075a <network_buffer_init+0xe>
+  40076a:	4b06      	ldr	r3, [pc, #24]	; (400784 <network_buffer_init+0x38>)
+        list_add_last(&network_buffers[i].list_node, &network_buffer_list);
+  40076c:	4618      	mov	r0, r3
+  40076e:	4613      	mov	r3, r2
+    node->previous = list->previous;
+  400770:	6050      	str	r0, [r2, #4]
+    for (int i = 0; i < NETWORK_BUFFER_COUNT; i++) {
+  400772:	f202 4214 	addw	r2, r2, #1044	; 0x414
+  400776:	428a      	cmp	r2, r1
+  400778:	d1f8      	bne.n	40076c <network_buffer_init+0x20>
+  40077a:	4b05      	ldr	r3, [pc, #20]	; (400790 <network_buffer_init+0x44>)
+  40077c:	606b      	str	r3, [r5, #4]
+    }
+}
+  40077e:	bc30      	pop	{r4, r5}
+  400780:	4770      	bx	lr
+  400782:	bf00      	nop
+  400784:	200000cc 	.word	0x200000cc
+  400788:	200004e4 	.word	0x200004e4
+  40078c:	2000d0cc 	.word	0x2000d0cc
+  400790:	2000ccb8 	.word	0x2000ccb8
+
+00400794 <allocate_network_buffer>:
+}
+
+//--------------------------------------------------------------------------------------------------
+
+static inline List* list_remove_first(List* list) {
+    if (list->next == list) {
+  400794:	4b0d      	ldr	r3, [pc, #52]	; (4007cc <allocate_network_buffer+0x38>)
+  400796:	681a      	ldr	r2, [r3, #0]
+  400798:	429a      	cmp	r2, r3
+  40079a:	d011      	beq.n	4007c0 <allocate_network_buffer+0x2c>
+
+    // Adjust the cursor so that the network stack can append all necessary headers.
+    buffer->length = 0;
+    buffer->index = 128;
+
+    network_buffer_count--;
+  40079c:	6899      	ldr	r1, [r3, #8]
+    buffer->length = 0;
+  40079e:	f2a2 400c 	subw	r0, r2, #1036	; 0x40c
+NetworkBuffer* allocate_network_buffer() {
+  4007a2:	b470      	push	{r4, r5, r6}
+    network_buffer_count--;
+  4007a4:	3901      	subs	r1, #1
+        return 0;
+    }
+
+    List* node = list->next;
+    list_remove(list->next);
+  4007a6:	6814      	ldr	r4, [r2, #0]
+    buffer->length = 0;
+  4007a8:	2600      	movs	r6, #0
+  4007aa:	6852      	ldr	r2, [r2, #4]
+    buffer->index = 128;
+  4007ac:	2580      	movs	r5, #128	; 0x80
+    network_buffer_count--;
+  4007ae:	6099      	str	r1, [r3, #8]
+    node->next->previous = node->previous;
+  4007b0:	6062      	str	r2, [r4, #4]
+    node->previous->next = node->next;
+  4007b2:	6014      	str	r4, [r2, #0]
+    buffer->length = 0;
+  4007b4:	f8c0 6400 	str.w	r6, [r0, #1024]	; 0x400
+    buffer->index = 128;
+  4007b8:	f8c0 5404 	str.w	r5, [r0, #1028]	; 0x404
+    return buffer;
+}
+  4007bc:	bc70      	pop	{r4, r5, r6}
+  4007be:	4770      	bx	lr
+    buffer->length = 0;
+  4007c0:	2200      	movs	r2, #0
+  4007c2:	4b03      	ldr	r3, [pc, #12]	; (4007d0 <allocate_network_buffer+0x3c>)
+  4007c4:	f8c3 2400 	str.w	r2, [r3, #1024]	; 0x400
+  4007c8:	deff      	udf	#255	; 0xff
+  4007ca:	bf00      	nop
+  4007cc:	200000cc 	.word	0x200000cc
+  4007d0:	fffffbf4 	.word	0xfffffbf4
+
+004007d4 <free_network_buffer>:
+    node->next = list->next;
+  4007d4:	4b07      	ldr	r3, [pc, #28]	; (4007f4 <free_network_buffer+0x20>)
+
+//--------------------------------------------------------------------------------------------------
+
+void free_network_buffer(NetworkBuffer* buffer) {
+    list_add_first(&buffer->list_node, &network_buffer_list);
+    network_buffer_count++;
+  4007d6:	689a      	ldr	r2, [r3, #8]
+  4007d8:	6819      	ldr	r1, [r3, #0]
+  4007da:	3201      	adds	r2, #1
+    node->previous = list;
+  4007dc:	f8c0 3410 	str.w	r3, [r0, #1040]	; 0x410
+    node->next = list->next;
+  4007e0:	f8c0 140c 	str.w	r1, [r0, #1036]	; 0x40c
+void free_network_buffer(NetworkBuffer* buffer) {
+  4007e4:	b410      	push	{r4}
+    list_add_first(&buffer->list_node, &network_buffer_list);
+  4007e6:	f200 440c 	addw	r4, r0, #1036	; 0x40c
+    network_buffer_count++;
+  4007ea:	609a      	str	r2, [r3, #8]
+    list->next = node;
+  4007ec:	601c      	str	r4, [r3, #0]
+    list->next->previous = node;
+  4007ee:	604c      	str	r4, [r1, #4]
+}
+  4007f0:	bc10      	pop	{r4}
+  4007f2:	4770      	bx	lr
+  4007f4:	200000cc 	.word	0x200000cc
+
+004007f8 <main>:
+    gmac_init();
+}
+
+//--------------------------------------------------------------------------------------------------
+
+void main() {
+  4007f8:	e92d 43f8 	stmdb	sp!, {r3, r4, r5, r6, r7, r8, r9, lr}
+    WDT->MR = 1 << 15;
+  4007fc:	f44f 4200 	mov.w	r2, #32768	; 0x8000
+  400800:	4b1f      	ldr	r3, [pc, #124]	; (400880 <main+0x88>)
+    system_init();
+
+    // On-board LED.
+    GPIOD->OER = 1 << 22;
+  400802:	f8df 808c 	ldr.w	r8, [pc, #140]	; 400890 <main+0x98>
+  400806:	f44f 0980 	mov.w	r9, #4194304	; 0x400000
+    WDT->MR = 1 << 15;
+  40080a:	605a      	str	r2, [r3, #4]
+    GPIOD->CODR = 1 << 22;
+
+    print("Starting\n");
+
+    u8 data = 1;
+  40080c:	2701      	movs	r7, #1
+    clock_init();
+  40080e:	f7ff ff35 	bl	40067c <clock_init>
+            print("Got a packet : {u}\n", buffer->length);
+            free_network_buffer(buffer);
+        }
+
+        delay();
+        GPIOD->SODR = 1 << 22;
+  400812:	4645      	mov	r5, r8
+    print_init();
+  400814:	f7ff fcf8 	bl	400208 <print_init>
+        GPIOD->SODR = 1 << 22;
+  400818:	464c      	mov	r4, r9
+    gmac_init();
+  40081a:	f7ff fd53 	bl	4002c4 <gmac_init>
+    GPIOD->OER = 1 << 22;
+  40081e:	f8c8 9010 	str.w	r9, [r8, #16]
+    print("Starting\n");
+  400822:	4818      	ldr	r0, [pc, #96]	; (400884 <main+0x8c>)
+    GPIOD->CODR = 1 << 22;
+  400824:	f8c8 9034 	str.w	r9, [r8, #52]	; 0x34
+            print("Got a packet : {u}\n", buffer->length);
+  400828:	4e17      	ldr	r6, [pc, #92]	; (400888 <main+0x90>)
+    print("Starting\n");
+  40082a:	f7ff fd09 	bl	400240 <print>
+        NetworkBuffer* buffer = allocate_network_buffer();
+  40082e:	f7ff ffb1 	bl	400794 <allocate_network_buffer>
+        for (int i = 0; i < 50; i++) {
+  400832:	f8d0 3404 	ldr.w	r3, [r0, #1028]	; 0x404
+  400836:	f103 0232 	add.w	r2, r3, #50	; 0x32
+            buffer->data[buffer->index + i] = data;
+  40083a:	54c7      	strb	r7, [r0, r3]
+        for (int i = 0; i < 50; i++) {
+  40083c:	3301      	adds	r3, #1
+  40083e:	4293      	cmp	r3, r2
+  400840:	d1fb      	bne.n	40083a <main+0x42>
+        buffer->length = 50;
+  400842:	2332      	movs	r3, #50	; 0x32
+        data++;
+  400844:	3701      	adds	r7, #1
+        buffer->length = 50;
+  400846:	f8c0 3400 	str.w	r3, [r0, #1024]	; 0x400
+        data++;
+  40084a:	b2ff      	uxtb	r7, r7
+        gmac_send(buffer);
+  40084c:	f7ff fe2e 	bl	4004ac <gmac_send>
+        buffer = gmac_receive();
+  400850:	f7ff fe76 	bl	400540 <gmac_receive>
+        if (buffer) {
+  400854:	4680      	mov	r8, r0
+  400856:	b138      	cbz	r0, 400868 <main+0x70>
+            print("Got a packet : {u}\n", buffer->length);
+  400858:	f8d0 1400 	ldr.w	r1, [r0, #1024]	; 0x400
+  40085c:	4630      	mov	r0, r6
+  40085e:	f7ff fcef 	bl	400240 <print>
+            free_network_buffer(buffer);
+  400862:	4640      	mov	r0, r8
+  400864:	f7ff ffb6 	bl	4007d4 <free_network_buffer>
+    u8 data = 1;
+  400868:	4b08      	ldr	r3, [pc, #32]	; (40088c <main+0x94>)
+        __asm__("nop");
+  40086a:	bf00      	nop
+    for (int i = 0; i < 5000000; i++) {
+  40086c:	3b01      	subs	r3, #1
+  40086e:	d1fc      	bne.n	40086a <main+0x72>
+        GPIOD->SODR = 1 << 22;
+  400870:	4b06      	ldr	r3, [pc, #24]	; (40088c <main+0x94>)
+  400872:	632c      	str	r4, [r5, #48]	; 0x30
+        __asm__("nop");
+  400874:	bf00      	nop
+    for (int i = 0; i < 5000000; i++) {
+  400876:	3b01      	subs	r3, #1
+  400878:	d1fc      	bne.n	400874 <main+0x7c>
+        delay();
+        GPIOD->CODR = 1 << 22;
+  40087a:	636c      	str	r4, [r5, #52]	; 0x34
+    while (1) {
+  40087c:	e7d7      	b.n	40082e <main+0x36>
+  40087e:	bf00      	nop
+  400880:	400e1850 	.word	0x400e1850
+  400884:	00400894 	.word	0x00400894
+  400888:	004008a0 	.word	0x004008a0
+  40088c:	004c4b40 	.word	0x004c4b40
+  400890:	400e1400 	.word	0x400e1400
