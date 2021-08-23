@@ -15,7 +15,7 @@ source += $(project_path)/gpio.c
 source += $(project_path)/clock.c
 source += $(project_path)/utilities.c
 
-source += $(project_path)/network/core.c
+source += $(project_path)/network/network.c
 source += $(project_path)/network/arp.c
 source += $(project_path)/network/mac.c
 
@@ -28,9 +28,9 @@ include += $(project_path)/include/gpio.h
 include += $(project_path)/include/clock.h
 include += $(project_path)/include/list.h
 
-include += $(project_path)/include/network/core.h
-include += $(project_path)/include/network/arp.h
-include += $(project_path)/include/network/mac.h
+include += $(project_path)/network/include/network.h
+include += $(project_path)/network/include/arp.h
+include += $(project_path)/network/include/mac.h
 
 dependencies += $(project_path)/make/makefile
 dependencies += $(project_path)/linker/linker.ld
@@ -48,6 +48,7 @@ compile_flags += -ffreestanding
 compile_flags += -mcpu=cortex-m7
 compile_flags += -mthumb
 compile_flags += -I$(project_path)/include
+compile_flags += -I$(project_path)/network/include
 
 linker_flags += -nostartfiles
 linker_flags += -mthumb

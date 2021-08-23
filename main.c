@@ -13,7 +13,7 @@
 #include "clock.h"
 #include "print.h"
 #include "gmac.h"
-#include "network/core.h"
+#include "network.h"
 
 //--------------------------------------------------------------------------------------------------
 

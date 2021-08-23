@@ -1,7 +1,7 @@
 // Author: strawberryhacker
 
-#include "network/arp.h"
-#include "network/core.h"
+#include "arp.h"
+#include "network.h"
 
 //--------------------------------------------------------------------------------------------------
 

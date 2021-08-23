@@ -1,7 +1,7 @@
 // Author: strawberryhacker
 
-#include "network/core.h"
-#include "network/mac.h"
+#include "network.h"
+#include "mac.h"
 
 //--------------------------------------------------------------------------------------------------
 
@@ -129,7 +129,6 @@ void network_init(NetworkInterface* interface, const char* mac_string) {
     network_interface.set_mac(&mac);
 
     // Setup the rest of the network stack.
-    print("Done setting up the network stack\n");
 }
 
 //--------------------------------------------------------------------------------------------------

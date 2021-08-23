@@ -1,7 +1,6 @@
 // Author: strawberryhacker
 
-#include "network/mac.h"
-#include "print.h"
+#include "mac.h"
 
 //--------------------------------------------------------------------------------------------------
 

@@ -4,7 +4,7 @@
 #define GMAC_H
 
 #include "utilities.h"
-#include "network/core.h"
+#include "network.h"
 
 //--------------------------------------------------------------------------------------------------
 
