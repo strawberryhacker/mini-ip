@@ -14,12 +14,13 @@ source += $(project_path)/time.c
 source += $(project_path)/gpio.c
 source += $(project_path)/clock.c
 source += $(project_path)/utilities.c
-
-source += $(project_path)/network/network.c
-source += $(project_path)/network/arp.c
-source += $(project_path)/network/mac.c
+source += $(project_path)/allocator.c
+source += $(project_path)/network.c
+source += $(project_path)/arp.c
+source += $(project_path)/mac.c
 
 include += $(project_path)/include/utilities.h
+include += $(project_path)/include/array.h
 include += $(project_path)/include/registers.h
 include += $(project_path)/include/print.h
 include += $(project_path)/include/gmac.h
@@ -27,10 +28,11 @@ include += $(project_path)/include/time.h
 include += $(project_path)/include/gpio.h
 include += $(project_path)/include/clock.h
 include += $(project_path)/include/list.h
-
-include += $(project_path)/network/include/network.h
-include += $(project_path)/network/include/arp.h
-include += $(project_path)/network/include/mac.h
+include += $(project_path)/include/interrupt.h
+include += $(project_path)/include/allocator.h
+include += $(project_path)/include/network.h
+include += $(project_path)/include/arp.h
+include += $(project_path)/include/mac.h
 
 dependencies += $(project_path)/make/makefile
 dependencies += $(project_path)/linker/linker.ld
@@ -38,7 +40,7 @@ dependencies += $(project_path)/linker/linker.ld
 #---------------------------------------------------------------------------------------------------
 
 compile_flags += -x c
-compile_flags += -O3
+compile_flags += -O0
 compile_flags += -g3
 compile_flags += -Wall
 compile_flags += -Wno-unused-variable
@@ -66,7 +68,7 @@ objects = $(addprefix $(output_path), $(subst $(project_path),, $(patsubst %.c, 
 
 main: $(output_path)/$(output_name).elf $(output_path)/$(output_name).lss $(output_path)/$(output_name).bin
 	@sudo edbg -t sam4e -F w,1,1
-	@sudo edbg -t sam4e -pv -f $(output_path)/$(output_name).bin
+	@sudo edbg -t sam4e -pv -f $(output_path)/$(output_name).bin -b
 
 clean:
 	@rm -r -f $(output_path)
