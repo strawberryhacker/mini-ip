@@ -2,6 +2,8 @@
 
 #include "network.h"
 #include "mac.h"
+#include "arp.h"
+#include "print.h"
 
 //--------------------------------------------------------------------------------------------------
 
@@ -20,6 +22,7 @@ static u32 gateway;
 static Mac mac;
 
 NetworkInterface network_interface;
+extern u32 linker_stack_end;
 
 //--------------------------------------------------------------------------------------------------
 
@@ -29,12 +32,24 @@ static void network_buffer_init() {
     for (int i = 0; i < NETWORK_BUFFER_COUNT; i++) {
         list_add_last(&network_buffers[i].list_node, &network_buffer_list);
     }
+
+    network_buffer_count = NETWORK_BUFFER_COUNT;
 }
 
 //--------------------------------------------------------------------------------------------------
 
 NetworkBuffer* allocate_network_buffer() {
+    if (network_buffer_count == 0) {
+        print("Not enough network buffers\n");
+        while (1);
+    }
+
     ListNode* node = list_remove_first(&network_buffer_list);
+    if (node == 0) {
+        print("This is not supposed to ever happend\n");
+        while (1);
+    }
+
     NetworkBuffer* buffer = list_get_struct(node, NetworkBuffer, list_node);
 
     // Adjust the cursor so that the network stack can append all necessary headers.
@@ -118,21 +133,27 @@ u32 network_read_32(void* pointer) {
 
 //--------------------------------------------------------------------------------------------------
 
+u32 time_difference(u32 old, u32 new) {
+    return (new >= old) ? new - old : 0xFFFFFFFF - old + new;
+}
+
+//--------------------------------------------------------------------------------------------------
+
 void network_init(NetworkInterface* interface, const char* mac_string) {
     memory_copy(interface, &network_interface, sizeof(NetworkInterface));
     string_to_mac(&mac, mac_string);
 
     network_buffer_init();
 
-    // This must be called after the network_buffer_init since it relies on allocating buffers.
     network_interface.init();
     network_interface.set_mac(&mac);
 
-    // Setup the rest of the network stack.
+    arp_init();
 }
 
 //--------------------------------------------------------------------------------------------------
 
 void network_task() {
     mac_receive();
+    arp_task();
 }

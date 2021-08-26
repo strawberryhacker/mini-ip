@@ -1,6 +1,7 @@
 // Author: strawberryhacker
 
 #include "utilities.h"
+#include "print.h"
 
 //--------------------------------------------------------------------------------------------------
 
@@ -43,6 +44,7 @@ static void reset_handler() {
 //--------------------------------------------------------------------------------------------------
 
 static void exception_not_implemented() {
+    print("Error\n");
     while (1);
 }
 
@@ -81,15 +83,15 @@ void twi0_interrupt()         WEAK;
 void twi1_interrupt()         WEAK;
 void spi_interrupt()          WEAK;
 void dma_interrupt()          WEAK;
-void tc0_interrupt()          WEAK;
-void tc1_interrupt()          WEAK;
-void tc2_interrupt()          WEAK;
-void tc3_interrupt()          WEAK;
-void tc4_interrupt()          WEAK;
-void tc5_interrupt()          WEAK;
-void tc6_interrupt()          WEAK;
-void tc7_interrupt()          WEAK;
-void tc8_interrupt()          WEAK;
+void timer0_interrupt()       WEAK;
+void timer1_interrupt()       WEAK;
+void timer2_interrupt()       WEAK;
+void timer3_interrupt()       WEAK;
+void timer4_interrupt()       WEAK;
+void timer5_interrupt()       WEAK;
+void timer6_interrupt()       WEAK;
+void timer7_interrupt()       WEAK;
+void timer8_interrupt()       WEAK;
 void afe0_interrupt()         WEAK;
 void afe1_interrupt()         WEAK;
 void dac_interrupt()          WEAK;
@@ -143,15 +145,15 @@ __attribute__ ((section(".vector_table"))) volatile const void* vectors[] = {
     twi1_interrupt,
     spi_interrupt,
     dma_interrupt,
-    tc0_interrupt,
-    tc1_interrupt,
-    tc2_interrupt,
-    tc3_interrupt,
-    tc4_interrupt,
-    tc5_interrupt,
-    tc6_interrupt,
-    tc7_interrupt,
-    tc8_interrupt,
+    timer0_interrupt,
+    timer1_interrupt,
+    timer2_interrupt,
+    timer3_interrupt,
+    timer4_interrupt,
+    timer5_interrupt,
+    timer6_interrupt,
+    timer7_interrupt,
+    timer8_interrupt,
     afe0_interrupt,
     afe1_interrupt,
     dac_interrupt,

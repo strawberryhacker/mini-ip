@@ -243,15 +243,15 @@ typedef struct {
     _rw u32   EMR;
 } TimerHardware;
 
-#define TIMER0_REG ((TimerHardware *)0x40090000)
-#define TIMER1_REG ((TimerHardware *)0x40090040)
-#define TIMER2_REG ((TimerHardware *)0x40090080)
-#define TIMER3_REG ((TimerHardware *)0x40094000)
-#define TIMER4_REG ((TimerHardware *)0x40094040)
-#define TIMER5_REG ((TimerHardware *)0x40094080)
-#define TIMER6_REG ((TimerHardware *)0x40098000)
-#define TIMER7_REG ((TimerHardware *)0x40098040)
-#define TIMER8_REG ((TimerHardware *)0x40098080)
+#define TIMER0 ((TimerHardware *)0x40090000)
+#define TIMER1 ((TimerHardware *)0x40090040)
+#define TIMER2 ((TimerHardware *)0x40090080)
+#define TIMER3 ((TimerHardware *)0x40094000)
+#define TIMER4 ((TimerHardware *)0x40094040)
+#define TIMER5 ((TimerHardware *)0x40094080)
+#define TIMER6 ((TimerHardware *)0x40098000)
+#define TIMER7 ((TimerHardware *)0x40098040)
+#define TIMER8 ((TimerHardware *)0x40098080)
 
 //--------------------------------------------------------------------------------------------------
 

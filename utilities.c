@@ -189,7 +189,7 @@ int format_string(const char* string, char* buffer, int buffer_size, va_list arg
             }
         }
         else if (c == 'u') {
-            buffer = write_number(read_number(&arguments, flags), width, flags, buffer, end);
+            buffer = write_number((flags & FORMAT_FLAG_BIG_NUMBER) ? (s64)va_arg(arguments, long long) : (s64)va_arg(arguments, unsigned int), width, flags, buffer, end);
         }
         else if (c == 's') {
             flags |= FORMAT_FLAG_SIGNED;
@@ -228,6 +228,24 @@ void memory_copy(const void* source, void* destination, int size) {
 
 //--------------------------------------------------------------------------------------------------
 
+void memory_move(const void* source, void* destination, int size) {
+    const u8* source_pointer = source;
+    u8* dest_pointer = destination;
+
+    if (dest_pointer > source_pointer) {
+        for (int i = 0; i < size; i++) {
+            dest_pointer[size - 1 - i] = source_pointer[size - 1 - i];
+        }
+    }
+    else if (dest_pointer < source_pointer) {
+        for (int i = 0; i < size; i++) {
+            dest_pointer[i] = source_pointer[i];
+        }
+    }
+}
+
+//--------------------------------------------------------------------------------------------------
+
 void memory_fill(void* memory, u8 fill, int size) {
     u8* destination = memory;
 
@@ -244,4 +262,28 @@ void memory_clear(void* memory, int size) {
     for (int i = 0; i < size; i++) {
         destination[i] = 0;
     }
+}
+
+//--------------------------------------------------------------------------------------------------
+
+int align_down(int value, int alignment) {
+    return value / alignment * alignment;
+}
+
+//--------------------------------------------------------------------------------------------------
+
+int align_up(int value, int alignment) {
+    return (value + alignment - 1) / alignment * alignment;
+}
+
+//--------------------------------------------------------------------------------------------------
+
+void* pointer_align_down(void* pointer, int alignment) {
+    return (void *)((ptr)pointer / (ptr)alignment * (ptr)alignment);
+}
+
+//--------------------------------------------------------------------------------------------------
+
+void* pointer_align_up(void* pointer, int alignment) {
+    return (void *)(((ptr)pointer + (ptr)alignment - 1) / (ptr)alignment * (ptr)alignment);
 }

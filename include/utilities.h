@@ -7,6 +7,7 @@
 #include "stdbool.h"
 #include "stdarg.h"
 #include "stdalign.h"
+#include "stddef.h"
 
 //--------------------------------------------------------------------------------------------------
 
@@ -19,6 +20,8 @@ typedef int8_t   s8;
 typedef int16_t  s16;
 typedef int32_t  s32;
 typedef int64_t  s64;
+
+typedef uintptr_t ptr;
 
 //--------------------------------------------------------------------------------------------------
 
@@ -36,5 +39,10 @@ int format_string(const char* string, char* buffer, int buffer_size, va_list arg
 void memory_clear(void* memory, int size);
 void memory_fill(void* memory, u8 fill, int size);
 void memory_copy(const void* source, void* destination, int size);
+void memory_move(const void* source, void* destination, int size);
+int align_down(int value, int alignment);
+int align_up(int value, int alignment);
+void* pointer_align_down(void* pointer, int alignment);
+void* pointer_align_up(void* pointer, int alignment);
 
 #endif

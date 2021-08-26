@@ -1,6 +1,5 @@
 // Author: strawberryhacker
 
-
 // @Cleanup @Incomplete @Speed
 // System information:
 // LED           : PD22
@@ -12,39 +11,32 @@
 #include "registers.h"
 #include "clock.h"
 #include "print.h"
+#include "allocator.h"
 #include "gmac.h"
+#include "time.h"
 #include "network.h"
+#include "mac.h"
 
 //--------------------------------------------------------------------------------------------------
 
-void delay() {
-    for (int i = 0; i < 5000000; i++) {
-        __asm__("nop");
-    }
-}
-
-//--------------------------------------------------------------------------------------------------
-
-static void system_init() {
-    // Disable the watchdog timer.
-    // @Note: when using an external debugger the chip might reset multiple times. This is not due
-    // to the watchdog timer, but is rather a debugger issue.
-    WDT->MR = 1 << 15;
-
-    clock_init();
-    print_init();
-}
+u8 memory[4096];
 
 //--------------------------------------------------------------------------------------------------
 
 void main() {
-    system_init();
+    // Disable the watchdog timer.
+    WDT->MR = 1 << 15;
+    clock_init();
+    print_init();
+    time_init();
+    allocator_set_memory_region(memory, 4096);
 
     NetworkInterface interface = {
-        .init    = gmac_init,
-        .set_mac = gmac_set_mac_address,
-        .read    = gmac_receive,
-        .write   = gmac_send,
+        .init     = gmac_init,
+        .set_mac  = gmac_set_mac_address,
+        .read     = gmac_receive,
+        .write    = gmac_send,
+        .get_time = get_time,
     };
 
     network_init(&interface, "34:34:34:34:34:34");

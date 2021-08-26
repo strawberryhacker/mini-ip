@@ -33,6 +33,7 @@ void print(const char* text, ...) {
     va_list arguments;
     va_start(arguments, text);
     int size = format_string(text, print_buffer, 1024, arguments);
+    va_end(arguments);
 
     for (int i = 0; i < size; i++) {
         // Some terminals like Linux's screen doen not work properly without the CR-LF sequence.

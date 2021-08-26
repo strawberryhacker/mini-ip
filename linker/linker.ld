@@ -8,7 +8,7 @@ MEMORY {
     ram   (rwx) : ORIGIN = 0x20000000, LENGTH = 0x20000    /* 128 KiB */
 }
 
-stack_size = 4096;
+stack_size = 16000;
 
 SECTIONS {
     .vector_table : {

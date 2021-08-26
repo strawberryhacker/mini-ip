@@ -6,12 +6,12 @@
 //--------------------------------------------------------------------------------------------------
 
 #include "utilities.h"
-#include "stddef.h"
 
 //--------------------------------------------------------------------------------------------------
 
 typedef struct List List;
 typedef struct List ListNode;
+
 struct List {
     List* next;
     List* previous;
@@ -19,11 +19,14 @@ struct List {
 
 //--------------------------------------------------------------------------------------------------
 
-#define list_get_struct(node, type, member) (type *)((u8 *)node - offsetof(type, member))
+#define list_get_struct(node, type, member) \
+    (type *)((u8 *)node - offsetof(type, member))
 
-#define list_get_first(list) ((list)->next)
+#define list_get_first(list) \
+    ((list)->next)
 
-#define list_get_last(list) ((list)->previous)
+#define list_get_last(list) \
+    ((list)->previous)
 
 #define list_iterate_with(node, list) \
     for (node = (list)->next; node != (list); node = node->next)

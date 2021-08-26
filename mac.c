@@ -1,6 +1,8 @@
 // Author: strawberryhacker
 
 #include "mac.h"
+#include "arp.h"
+#include "print.h"
 
 //--------------------------------------------------------------------------------------------------
 
@@ -75,7 +77,7 @@ void mac_send_to_ip(NetworkBuffer* buffer, u32 ip) {
         mac_broadcast(buffer, ETHER_TYPE_IPV4);
     }
     else {
-        // Arp.
+        arp_send(buffer, ip);
     }
 }
 
@@ -126,9 +128,10 @@ void mac_receive() {
     switch (network_read_16(&header->type)) {
         case ETHER_TYPE_IPV4:
             //handle_ip_packet(buffer);
+            free_network_buffer(buffer);
             break;
         case ETHER_TYPE_ARP:
-            //handle_arp_packet(buffer);
+            handle_arp_packet(buffer);
             break;
         default:
             free_network_buffer(buffer);

@@ -8,7 +8,7 @@
 
 //--------------------------------------------------------------------------------------------------
 
-#define NETWORK_BUFFER_SIZE 1024
+#define NETWORK_BUFFER_SIZE 512
 
 //--------------------------------------------------------------------------------------------------
 
@@ -16,12 +16,19 @@ typedef struct {
     u8 byte[6];
 } Mac;
 
+typedef Mac MacAddress;
+typedef u32 IpAddress;
+
 typedef struct {
     volatile u8 data[NETWORK_BUFFER_SIZE];
+
     int length;
     int index;
 
     bool broadcast;
+
+    IpAddress source_ip;
+    IpAddress destination_ip;    
 
     ListNode list_node;
 } NetworkBuffer;
@@ -32,6 +39,7 @@ typedef struct {
     void (*set_mac)(Mac* mac);
     void (*write)(NetworkBuffer* buffer);
     NetworkBuffer* (*read)();
+    u32 (*get_time)();
 } NetworkInterface;
 
 //--------------------------------------------------------------------------------------------------
@@ -56,5 +64,7 @@ void network_write_16(u16 value, void* pointer);
 void network_write_32(u32 value, void* pointer);
 u16 network_read_16(void* pointer);
 u32 network_read_32(void* pointer);
+
+u32 time_difference(u32 old, u32 new);
 
 #endif
