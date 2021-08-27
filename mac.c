@@ -3,6 +3,7 @@
 #include "mac.h"
 #include "arp.h"
 #include "print.h"
+#include "ip.h"
 
 //--------------------------------------------------------------------------------------------------
 
@@ -127,8 +128,7 @@ void mac_receive() {
 
     switch (network_read_16(&header->type)) {
         case ETHER_TYPE_IPV4:
-            //handle_ip_packet(buffer);
-            free_network_buffer(buffer);
+            handle_ip_packet(buffer);
             break;
         case ETHER_TYPE_ARP:
             handle_arp_packet(buffer);

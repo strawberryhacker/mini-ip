@@ -18,6 +18,9 @@ source += $(project_path)/allocator.c
 source += $(project_path)/network.c
 source += $(project_path)/arp.c
 source += $(project_path)/mac.c
+source += $(project_path)/ip.c
+source += $(project_path)/udp.c
+source += $(project_path)/dhcp.c
 
 include += $(project_path)/include/utilities.h
 include += $(project_path)/include/array.h
@@ -33,6 +36,9 @@ include += $(project_path)/include/allocator.h
 include += $(project_path)/include/network.h
 include += $(project_path)/include/arp.h
 include += $(project_path)/include/mac.h
+include += $(project_path)/include/ip.h
+include += $(project_path)/include/udp.h
+include += $(project_path)/include/dhcp.h
 
 dependencies += $(project_path)/make/makefile
 dependencies += $(project_path)/linker/linker.ld
