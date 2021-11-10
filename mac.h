@@ -15,12 +15,11 @@ enum {
 
 //--------------------------------------------------------------------------------------------------
 
+Mac string_to_mac(const char* string);
 void mac_to_string(const Mac* mac, char* string, bool lowercase);
-void string_to_mac(Mac* mac, const char* string);
-
-void mac_send_to_ip(NetworkBuffer* buffer, u32 ip);
-void mac_send_to_mac(NetworkBuffer* buffer, const Mac* destination_mac, int ether_type);
-void mac_broadcast(NetworkBuffer* buffer, int ether_type);
-void mac_receive();
+void mac_send(NetworkPacket* packet, const Mac* mac, u16 ether_type);
+void mac_broadcast(NetworkPacket* packet, u16 ether_type);
+void mac_send_to_ip(NetworkPacket* packet, Ip ip);
+void handle_mac();
 
 #endif

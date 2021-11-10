@@ -1,13 +1,13 @@
 // Author: strawberryhacker
 
-#ifndef PRINT_H
-#define PRINT_H
+#ifndef ICMP_H
+#define ICMP_H
 
 #include "utilities.h"
+#include "network.h"
 
 //--------------------------------------------------------------------------------------------------
 
-void print_init();
-void print(const char* text, ...);
+void handle_icmp(NetworkPacket* packet);
 
 #endif

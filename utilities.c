@@ -5,16 +5,16 @@
 //--------------------------------------------------------------------------------------------------
 
 enum {
-    FORMAT_FLAG_ZERO_PAD     = 0x1,
-    FORMAT_FLAG_NO_SIGN      = 0x2,
-    FORMAT_FLAG_ALWAYS_SIGN  = 0x4,
-    FORMAT_FLAG_LEFT_JUSTIFY = 0x8,
-    FORMAT_FLAG_SIZE_GIVEN   = 0x10,
-    FORMAT_FLAG_UPPERCASE    = 0x20,
-    FORMAT_FLAG_HEX          = 0x40,
-    FORMAT_FLAG_SIGNED       = 0x80,
-    FORMAT_FLAG_BINARY       = 0x100,
-    FORMAT_FLAG_BIG_NUMBER   = 0x200,
+    FORMAT_FLAG_ZERO_PAD     = 1 << 0,
+    FORMAT_FLAG_NO_SIGN      = 1 << 1,
+    FORMAT_FLAG_ALWAYS_SIGN  = 1 << 2,
+    FORMAT_FLAG_LEFT_JUSTIFY = 1 << 3,
+    FORMAT_FLAG_SIZE_GIVEN   = 1 << 4,
+    FORMAT_FLAG_UPPERCASE    = 1 << 5,
+    FORMAT_FLAG_HEX          = 1 << 6,
+    FORMAT_FLAG_SIGNED       = 1 << 7,
+    FORMAT_FLAG_BINARY       = 1 << 8,
+    FORMAT_FLAG_BIG_NUMBER   = 1 << 9,
 };
 
 //--------------------------------------------------------------------------------------------------
@@ -188,6 +188,10 @@ int format_string(const char* string, char* buffer, int buffer_size, va_list arg
                 write_char(pad_char, &buffer, end);
             }
         }
+        else if (c == 'c') {
+            char c = (char)va_arg(arguments, int);
+            write_char(c, &buffer, end);
+        }
         else if (c == 'u') {
             buffer = write_number((flags & FORMAT_FLAG_BIG_NUMBER) ? (s64)va_arg(arguments, long long) : (s64)va_arg(arguments, unsigned int), width, flags, buffer, end);
         }
@@ -195,8 +199,11 @@ int format_string(const char* string, char* buffer, int buffer_size, va_list arg
             flags |= FORMAT_FLAG_SIGNED;
             buffer = write_number(read_number(&arguments, flags), width, flags, buffer, end);
         }
-        else if (c == 'h') {
+        else if (c == 'h' || c == 'H') {
             flags |= FORMAT_FLAG_HEX;
+            if (c == 'H') {
+                flags |= FORMAT_FLAG_UPPERCASE;
+            }
             buffer = write_number(read_number(&arguments, flags), width, flags, buffer, end);
         }
         else if (c == 'b') {
@@ -213,77 +220,4 @@ int format_string(const char* string, char* buffer, int buffer_size, va_list arg
     }
 
     return buffer - start;
-}
-
-//--------------------------------------------------------------------------------------------------
-
-void memory_copy(const void* source, void* destination, int size) {
-    const u8* source_pointer = source;
-    u8* destination_pointer = destination;
-
-    for (int i = 0; i < size; i++) {
-        destination_pointer[i] = source_pointer[i];
-    }
-}
-
-//--------------------------------------------------------------------------------------------------
-
-void memory_move(const void* source, void* destination, int size) {
-    const u8* source_pointer = source;
-    u8* dest_pointer = destination;
-
-    if (dest_pointer > source_pointer) {
-        for (int i = 0; i < size; i++) {
-            dest_pointer[size - 1 - i] = source_pointer[size - 1 - i];
-        }
-    }
-    else if (dest_pointer < source_pointer) {
-        for (int i = 0; i < size; i++) {
-            dest_pointer[i] = source_pointer[i];
-        }
-    }
-}
-
-//--------------------------------------------------------------------------------------------------
-
-void memory_fill(void* memory, u8 fill, int size) {
-    u8* destination = memory;
-
-    for (int i = 0; i < size; i++) {
-        destination[i] = fill;
-    }
-}
-
-//--------------------------------------------------------------------------------------------------
-
-void memory_clear(void* memory, int size) {
-    u8* destination = memory;
-
-    for (int i = 0; i < size; i++) {
-        destination[i] = 0;
-    }
-}
-
-//--------------------------------------------------------------------------------------------------
-
-int align_down(int value, int alignment) {
-    return value / alignment * alignment;
-}
-
-//--------------------------------------------------------------------------------------------------
-
-int align_up(int value, int alignment) {
-    return (value + alignment - 1) / alignment * alignment;
-}
-
-//--------------------------------------------------------------------------------------------------
-
-void* pointer_align_down(void* pointer, int alignment) {
-    return (void *)((ptr)pointer / (ptr)alignment * (ptr)alignment);
-}
-
-//--------------------------------------------------------------------------------------------------
-
-void* pointer_align_up(void* pointer, int alignment) {
-    return (void *)(((ptr)pointer + (ptr)alignment - 1) / (ptr)alignment * (ptr)alignment);
 }

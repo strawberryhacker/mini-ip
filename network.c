@@ -1,159 +1,110 @@
 // Author: strawberryhacker
 
 #include "network.h"
-#include "mac.h"
 #include "arp.h"
-#include "print.h"
+#include "mac.h"
+#include "gmac.h"
+#include "udp.h"
+#include "dhcp.h"
 
 //--------------------------------------------------------------------------------------------------
 
-#define NETWORK_BUFFER_COUNT 50
+#define NETWORK_PACKET_COUNT 96
 
 //--------------------------------------------------------------------------------------------------
 
-static NetworkBuffer network_buffers[NETWORK_BUFFER_COUNT];
-static List network_buffer_list;
-static int network_buffer_count;
+static NetworkPacket network_packets[NETWORK_PACKET_COUNT];
+static List free_network_packets;
 
-// Our network configuration. The MAC address is known at startup. The rest is resolved through DHCP.
-static u32 ip;
-static u32 netmask;
-static u32 gateway;
-static Mac mac;
-
-NetworkInterface network_interface;
-extern u32 linker_stack_end;
+static Mac our_mac;
+static Ip our_ip;
+static Ip our_netmask;
 
 //--------------------------------------------------------------------------------------------------
 
-static void network_buffer_init() {
-    list_init(&network_buffer_list);
+void network_init() {
+    list_init(&free_network_packets);
 
-    for (int i = 0; i < NETWORK_BUFFER_COUNT; i++) {
-        list_add_last(&network_buffers[i].list_node, &network_buffer_list);
+    for (int i = 0; i < NETWORK_PACKET_COUNT; i++) {
+        list_add_first(&network_packets[i].list_node, &free_network_packets);
     }
-
-    network_buffer_count = NETWORK_BUFFER_COUNT;
-}
-
-//--------------------------------------------------------------------------------------------------
-
-NetworkBuffer* allocate_network_buffer() {
-    if (network_buffer_count == 0) {
-        print("Not enough network buffers\n");
-        while (1);
-    }
-
-    ListNode* node = list_remove_first(&network_buffer_list);
-    if (node == 0) {
-        print("This is not supposed to ever happend\n");
-        while (1);
-    }
-
-    NetworkBuffer* buffer = list_get_struct(node, NetworkBuffer, list_node);
-
-    // Adjust the cursor so that the network stack can append all necessary headers.
-    buffer->length = 0;
-    buffer->index = 128;
-
-    network_buffer_count--;
-    return buffer;
-}
-
-//--------------------------------------------------------------------------------------------------
-
-void free_network_buffer(NetworkBuffer* buffer) {
-    list_add_first(&buffer->list_node, &network_buffer_list);
-    network_buffer_count++;
-}
-
-//--------------------------------------------------------------------------------------------------
-
-u32 get_netmask() {
-    return netmask;
-}
-
-//--------------------------------------------------------------------------------------------------
-
-u32 get_ip() {
-    return ip;
-}
-
-//--------------------------------------------------------------------------------------------------
-
-u32 get_gateway() {
-    return gateway;
-}
-
-//--------------------------------------------------------------------------------------------------
-
-Mac* get_mac() {
-    return &mac;
-}
-
-//--------------------------------------------------------------------------------------------------
-
-void update_network_configuration(u32 new_ip, u32 new_netmask, u32 new_gateway) {
-    ip = new_ip;
-    netmask = new_netmask;
-    gateway = new_gateway;
-}
-
-//--------------------------------------------------------------------------------------------------
-
-void network_write_16(u16 value, void* pointer) {
-    u8* source = pointer; 
-    source[0] = (value >> 8) & 0xFF;
-    source[1] = (value >> 0) & 0xFF;
-}
-
-//--------------------------------------------------------------------------------------------------
-
-void network_write_32(u32 value, void* pointer) {
-    u8* source = pointer;
-    source[0] = (value >> 24) & 0xFF;
-    source[1] = (value >> 16) & 0xFF;
-    source[2] = (value >> 8 ) & 0xFF;
-    source[3] = (value >> 0 ) & 0xFF;
-}
-
-//--------------------------------------------------------------------------------------------------
-
-u16 network_read_16(void* pointer) {
-    u8* source = pointer;
-    return source[0] << 8 | source[1] << 0;
-}
-
-//--------------------------------------------------------------------------------------------------
-
-u32 network_read_32(void* pointer) {
-    u8* source = pointer;
-    return source[0] << 24 | source[1] << 16 | source[2] << 8 | source[3] << 0;
-}
-
-//--------------------------------------------------------------------------------------------------
-
-u32 time_difference(u32 old, u32 new) {
-    return (new >= old) ? new - old : 0xFFFFFFFF - old + new;
-}
-
-//--------------------------------------------------------------------------------------------------
-
-void network_init(NetworkInterface* interface, const char* mac_string) {
-    memory_copy(interface, &network_interface, sizeof(NetworkInterface));
-    string_to_mac(&mac, mac_string);
-
-    network_buffer_init();
-
-    network_interface.init();
-    network_interface.set_mac(&mac);
 
     arp_init();
+    udp_init();
+}
+
+//--------------------------------------------------------------------------------------------------
+
+NetworkPacket* allocate_network_packet() {
+    ListNode* node = list_remove_first(&free_network_packets);
+
+    // All packets have been allocated.
+    if (node == 0) {
+        while (1);
+    }
+
+    NetworkPacket* packet = get_struct_containing_list_node(node, NetworkPacket, list_node);
+    packet->length = 0;
+    packet->index = NETWORK_PACKET_HEADER_SIZE;
+    
+    return packet;
+}
+
+//--------------------------------------------------------------------------------------------------
+
+void free_network_packet(NetworkPacket* packet) {
+    list_add_first(&packet->list_node, &free_network_packets);
 }
 
 //--------------------------------------------------------------------------------------------------
 
 void network_task() {
-    mac_receive();
+    for (int i = 0; i < RECEIVE_DESCRIPTOR_COUNT; i++) {
+        NetworkPacket* packet = gmac_receive();
+        if (packet == 0) {
+            break;
+        }
+
+        handle_mac(packet);
+    }
+
     arp_task();
+    dhcp_task();
+}
+
+//--------------------------------------------------------------------------------------------------
+
+void set_our_mac(const Mac* mac) {
+    memory_copy(mac, &our_mac, sizeof(Mac));
+    gmac_set_mac_address(mac);
+}
+
+//--------------------------------------------------------------------------------------------------
+
+Mac* get_our_mac() {
+    return &our_mac;
+}
+
+//--------------------------------------------------------------------------------------------------
+
+void set_our_ip(Ip ip) {
+    our_ip = ip;
+}
+
+//--------------------------------------------------------------------------------------------------
+
+Ip get_our_ip() {
+    return our_ip;
+}
+
+//--------------------------------------------------------------------------------------------------
+
+void set_our_netmask(Ip netmask) {
+    our_netmask = netmask;
+}
+
+//--------------------------------------------------------------------------------------------------
+
+Ip get_our_netmask() {
+    return our_netmask;
 }

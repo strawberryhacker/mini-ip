@@ -2,22 +2,30 @@
 
 #include "arp.h"
 #include "network.h"
+#include "list.h"
+#include "time.h"
 #include "mac.h"
-#include "array.h"
-#include "print.h"
+#include "ip.h"
 
 //--------------------------------------------------------------------------------------------------
 
-#define ARP_MAX_ENTRY_COUNT            16
-#define ARP_MAX_RETRY_COUNT            1000
-#define ARP_RETRY_INTERVAL             400
-#define ARP_ENTRY_TIMEOUT_INTERVAL     3600000
-#define ARP_MAX_OUTPUT_QUEUE_SIZE      1
-#define ENABLE_GRATUITOUS_ARP_HANDLING true
+#define ARP_ENTRY_COUNT                8
+#define ARP_ENTRY_MAX_QUEUE_SIZE       2
+#define ARP_ENTRY_EXPIRATION_INTERVAL  60000
+
+#define ARP_RETRY_INTERVAL   1000
+#define ARP_RETRY_MAX_COUNT  3
+
+#define HARDWARE_TYPE_ETHERNET  1
+
+//--------------------------------------------------------------------------------------------------
 
 enum {
-    ARP_STATE_PENDING = 0,
-    ARP_STATE_MAPPED  = 1,
+    ARP_TYPE_GRATUITOUS,
+    ARP_TYPE_PROBE,
+    ARP_TYPE_ANNOUNCEMENT,
+    ARP_TYPE_REQUEST,
+    ARP_TYPE_REPLY,
 };
 
 enum {
@@ -25,266 +33,201 @@ enum {
     ARP_OPERATION_REPLY   = 2,
 };
 
-enum {
-    ARP_TYPE_REQUEST      = 0,
-    ARP_TYPE_PROBE        = 1,
-    ARP_TYPE_ANNOUNCEMENT = 2,
-    ARP_TYPE_GRATUITOUS   = 3,
-    ARP_TYPE_REPLY        = 4,
-};
-
 //--------------------------------------------------------------------------------------------------
 
 typedef struct PACKED {
     u16 hardware_type;
     u16 protocol_type;
-    u8 mac_length;
-    u8 ip_length;
+    u8  hardware_length;
+    u8  protocol_length;
     u16 operation;
-    Mac source_mac;
-    u32 source_ip;
-    Mac destination_mac;
-    u32 destination_ip;
+    Mac senders_mac;
+    Ip  senders_ip;
+    Mac target_mac;
+    Ip  target_ip;
 } ArpHeader;
 
 typedef struct {
-    int state;
-
-    u32 ip;
-    Mac mac;
-
-    List output_queue;
-    int output_queue_size;
-
-    int retry_count;
-    u32 time;
+    Mac      mac;
+    Ip       ip;
+    bool     contain_valid_mapping;
+    Time     time;
+    int      retry_count;
+    List     packet_queue;
+    int      packet_count;
+    ListNode list_node;
 } ArpEntry;
-
-define_array(arp_table, ArpTable, ArpEntry);
 
 //--------------------------------------------------------------------------------------------------
 
-static ArpTable arp_table;
+static ArpEntry arp_entries[ARP_ENTRY_COUNT];
+static List free_entries;
+static List used_entries;
 
 //--------------------------------------------------------------------------------------------------
 
 void arp_init() {
-    arp_table_init(&arp_table, ARP_MAX_ENTRY_COUNT);
-}
+    list_init(&free_entries);
+    list_init(&used_entries);
 
-//--------------------------------------------------------------------------------------------------
-
-static int find_entry(IpAddress ip) {
-    for (int i = 0; i < arp_table.count; i++) {
-        if (arp_table.items[i].ip == ip) {
-            return i;
-        }
-    }
-
-    return -1;
-}
-
-//--------------------------------------------------------------------------------------------------
-
-static void arp_entry_send_queued_packets(int index) {
-    ArpEntry* entry = &arp_table.items[index];
-
-    while (1) {
-        ListNode* node = list_remove_first(&entry->output_queue);
-        if (node == 0) {
-            return;
-        }
-
-        NetworkBuffer* buffer = list_get_struct(node, NetworkBuffer, list_node);
-        mac_send_to_mac(buffer, &entry->mac, ETHER_TYPE_IPV4);
+    for (int i = 0; i < ARP_ENTRY_COUNT; i++) {
+        list_init(&arp_entries[i].packet_queue);
+        list_add_first(&arp_entries[i].list_node, &free_entries);
     }
 }
 
 //--------------------------------------------------------------------------------------------------
 
-static void delete_arp_entry(int index) {
-    ArpEntry* entry = &arp_table.items[index];
-
+static void free_entry(ArpEntry* entry) {
+    // Delete any pending packets before freing the entry.
     while (1) {
-        ListNode* node = list_remove_first(&entry->output_queue);
+        ListNode* node = list_remove_first(&entry->packet_queue);
+
         if (node == 0) {
             break;
         }
 
-        NetworkBuffer* buffer = list_get_struct(node, NetworkBuffer, list_node);
-        free_network_buffer(buffer);
+        NetworkPacket* packet = get_struct_containing_list_node(node, NetworkPacket, list_node);
+        free_network_packet(packet);
+        entry->packet_count--;
     }
 
-    arp_table_remove(&arp_table, index);
+    list_remove(&entry->list_node);
+    list_add_first(&entry->list_node, &free_entries);
 }
 
 //--------------------------------------------------------------------------------------------------
 
-void add_packet_to_arp_queue(NetworkBuffer* buffer, int index) {
-    ArpEntry* entry = &arp_table.items[index];
+static ArpEntry* allocate_entry() {
+    ListNode* node = list_remove_first(&free_entries);
 
-    // Keep the output queue below a certain limit.
-    if (entry->output_queue_size >= ARP_MAX_OUTPUT_QUEUE_SIZE) {
-        NetworkBuffer* delete_this = list_get_struct(list_remove_first(&entry->output_queue), NetworkBuffer, list_node);
-        free_network_buffer(delete_this);
-        entry->output_queue_size--;
+    // Handle cases where no free ARP entries are avaliable.
+    if (node == 0) {
+        ListNode* used_node = list_get_first(&used_entries);
+        ArpEntry* entry = get_struct_containing_list_node(used_node, ArpEntry, list_node);
+
+        free_entry(entry);
+        node = &entry->list_node;
     }
 
-    list_add_last(&buffer->list_node, &entry->output_queue);
-    entry->output_queue_size++;
+    ArpEntry* entry = get_struct_containing_list_node(node, ArpEntry, list_node);
+
+    entry->contain_valid_mapping = false;
+    entry->retry_count = 0;
+    entry->packet_count = 0;
+
+    list_add_last(&entry->list_node, &used_entries);
+    return entry;
 }
 
 //--------------------------------------------------------------------------------------------------
 
-static void send_arp_packet(u32 destination_ip, const Mac* destination_mac, int arp_type) {
-    NetworkBuffer* buffer = allocate_network_buffer();
+// The target_mac is only needed for ARP reply. The target_ip is not needed for ARP announcement or 
+// gratuitous ARP. 
+static void send_arp_packet(Mac* target_mac, Ip target_ip, int arp_type) {
+    NetworkPacket* packet = allocate_network_packet();
 
-    buffer->index -= sizeof(ArpHeader);
-    buffer->length += sizeof(ArpHeader);
-
-    ArpHeader* header = (ArpHeader *)&buffer->data[buffer->index];
-
-    network_write_16(1, &header->hardware_type);
-    network_write_16(ETHER_TYPE_IPV4, &header->protocol_type);
-    header->ip_length = 4;
-    header->mac_length = 6;
-
-    u32 source_ip = get_ip();
-    Mac* source_mac = get_mac();
-    u16 operation = ARP_OPERATION_REQUEST;
+    ArpHeader* header = (ArpHeader *)&packet->data[packet->index];
+    packet->length = sizeof(ArpHeader);
 
     if (arp_type != ARP_TYPE_REPLY) {
-        destination_mac = &(Mac){ .byte = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 } };
+        target_mac = &(Mac){ .address = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 } };
     }
 
-    if (arp_type == ARP_TYPE_PROBE) {
-        source_ip = 0;
-    }
-    else if (arp_type == ARP_TYPE_ANNOUNCEMENT) {
-        source_ip = destination_ip;
-    }
-    else if (arp_type == ARP_TYPE_GRATUITOUS) {
-        operation = ARP_OPERATION_REPLY;
-        destination_ip = source_ip;
-    }
-    else if (arp_type == ARP_TYPE_REPLY) {
-        operation = ARP_OPERATION_REPLY;
+    if (arp_type == ARP_TYPE_ANNOUNCEMENT || arp_type == ARP_TYPE_GRATUITOUS) {
+        target_ip = get_our_ip();
     }
 
-    memory_copy(source_mac, &header->source_mac, sizeof(Mac));
-    memory_copy(destination_mac, &header->destination_mac, sizeof(Mac));
-    network_write_32(source_ip, &header->source_ip);
-    network_write_32(destination_ip, &header->destination_ip);
-    network_write_16(operation, &header->operation);
+    Ip senders_ip = (arp_type == ARP_TYPE_PROBE) ? 0 : get_our_ip();
+    u16 operation = (arp_type == ARP_TYPE_GRATUITOUS || arp_type == ARP_TYPE_REPLY) ? ARP_OPERATION_REPLY : ARP_OPERATION_REQUEST;
+
+    memory_copy(get_our_mac(), &header->senders_mac, sizeof(Mac));
+    memory_copy(target_mac, &header->target_mac, sizeof(Mac));
+
+    header->hardware_length = sizeof(Mac);
+    header->protocol_length = sizeof(Ip);
+
+    write_be16(HARDWARE_TYPE_ETHERNET, &header->hardware_type);
+    write_be16(ETHER_TYPE_IPV4, &header->protocol_type);
+    write_be16(operation, &header->operation);
+    write_be32(senders_ip, &header->senders_ip);
+    write_be32(target_ip, &header->target_ip);
 
     if (arp_type == ARP_TYPE_REPLY) {
-        mac_send_to_mac(buffer, destination_mac, ETHER_TYPE_ARP);
+        mac_send(packet, target_mac, ETHER_TYPE_ARP);
     }
     else {
-        mac_broadcast(buffer, ETHER_TYPE_ARP);
+        mac_broadcast(packet, ETHER_TYPE_ARP);
     }
 }
 
 //--------------------------------------------------------------------------------------------------
 
-static void send_arp_request(u32 destination_ip) {
-    send_arp_packet(destination_ip, 0, ARP_TYPE_REQUEST);
-}
+static ArpEntry* find_arp_entry(Ip ip) {
+    list_iterate(it, &used_entries) {
+        ArpEntry* entry = get_struct_containing_list_node(it, ArpEntry, list_node);
 
-//--------------------------------------------------------------------------------------------------
-
-static void send_arp_probe(u32 destination_ip) {
-    send_arp_packet(destination_ip, 0, ARP_TYPE_PROBE);
-}
-
-//--------------------------------------------------------------------------------------------------
-
-static void send_arp_announcement(u32 destination_ip) {
-    send_arp_packet(destination_ip, 0, ARP_TYPE_ANNOUNCEMENT);
-}
-
-//--------------------------------------------------------------------------------------------------
-
-static void send_arp_reply(u32 destination_ip, const Mac* destination_mac) {
-    send_arp_packet(destination_ip, destination_mac, ARP_TYPE_REPLY);
-}
-
-//--------------------------------------------------------------------------------------------------
-
-void arp_send(NetworkBuffer* buffer, u32 destination_ip) {
-    // Do a linear search through the ARP table. Normally we find an entry with matching IP address
-    // which is in the MAPPED state. It does not make sense to implement any search algorithm here.
-    int index = find_entry(destination_ip);
-
-    if (index >= 0 && arp_table.items[index].ip == destination_ip) {
-        if (arp_table.items[index].state == ARP_STATE_MAPPED) {
-            mac_send_to_mac(buffer, &arp_table.items[index].mac, ETHER_TYPE_IPV4);
+        if (entry->ip == ip) {
+            return entry;
         }
-        else {
-            add_packet_to_arp_queue(buffer, index);
-        }
+    }
 
+    return 0;
+}
+
+//--------------------------------------------------------------------------------------------------
+
+static void add_to_arp_entry_queue(NetworkPacket* packet, ArpEntry* entry) {
+    if (entry->packet_count == ARP_ENTRY_MAX_QUEUE_SIZE) {
+        ListNode* node = list_remove_first(&entry->packet_queue);
+        NetworkPacket* packet_to_delete = get_struct_containing_list_node(node, NetworkPacket, list_node);
+
+        // Evict the least recently added packet.
+        free_network_packet(packet_to_delete);
+        entry->packet_count--;
+    }
+
+    list_add_last(&packet->list_node, &entry->packet_queue);
+    entry->packet_count++;
+}
+
+//--------------------------------------------------------------------------------------------------
+
+void arp_send(NetworkPacket* packet, Ip ip) {
+    ArpEntry* entry = find_arp_entry(ip);
+
+    if (entry) {
+        if (entry->contain_valid_mapping) {
+            mac_send(packet, &entry->mac, ETHER_TYPE_IPV4);
+            return;
+        }
+        
+        add_to_arp_entry_queue(packet, entry);
         return;
     }
 
-    if (arp_table.count >= ARP_MAX_ENTRY_COUNT) {
-        delete_arp_entry(0);
-    }
+    entry = allocate_entry();
 
-    // Make a new ARP entry. Mark it as pending. Add the packet to the output queue.
-    index = arp_table_append_nocopy(&arp_table);
-    ArpEntry* entry = &arp_table.items[index];
+    entry->ip = ip;
+    entry->contain_valid_mapping = false;
+    entry->time = get_time();
 
-    entry->ip = destination_ip;
-    entry->retry_count = 1;
-    entry->state = ARP_STATE_PENDING;
-    entry->output_queue_size = 0;
-    list_init(&entry->output_queue);
-    add_packet_to_arp_queue(buffer, index);
-
-    entry->time = network_interface.get_time();
-    send_arp_request(destination_ip);
+    add_to_arp_entry_queue(packet, entry);
+    send_arp_packet(0, ip, ARP_TYPE_REQUEST);
 }
 
 //--------------------------------------------------------------------------------------------------
 
-void arp_task() {
-    for (int i = 0; i < arp_table.count;) {
-        ArpEntry* entry = &arp_table.items[i];
-
-        if (entry->state == ARP_STATE_PENDING && time_difference(entry->time, network_interface.get_time()) > ARP_RETRY_INTERVAL) {
-            if (entry->retry_count == ARP_MAX_RETRY_COUNT) {
-                delete_arp_entry(i);
-                continue;
-            }
-            else {
-                entry->time = network_interface.get_time();
-                send_arp_request(entry->ip);
-                entry->retry_count++;
-            }
-        }
-        else if (entry->state == ARP_STATE_MAPPED && time_difference(entry->time, network_interface.get_time()) > ARP_ENTRY_TIMEOUT_INTERVAL) {
-            // We could set the state to PENDING and acquire the MAC address again. I do not know what is reccomended.
-            delete_arp_entry(i);
-            continue;
-        }
-
-        i++;
-    }
-}
-
-//--------------------------------------------------------------------------------------------------
-
-static bool verify_arp_header(ArpHeader* header) {
-    if (network_read_16(&header->hardware_type) != 1) {
+static bool validate_arp_header(ArpHeader* header) {
+    if (read_be16(&header->hardware_type) != HARDWARE_TYPE_ETHERNET) {
         return false;
     }
 
-    if (network_read_16(&header->protocol_type) != ETHER_TYPE_IPV4) {
+    if (read_be16(&header->protocol_type) != ETHER_TYPE_IPV4) {
         return false;
     }
 
-    if (header->ip_length != 4 || header->mac_length != 6) {
+    if (header->hardware_length != sizeof(Mac) || header->protocol_length != sizeof(Ip)) {
         return false;
     }
 
@@ -293,41 +236,89 @@ static bool verify_arp_header(ArpHeader* header) {
 
 //--------------------------------------------------------------------------------------------------
 
-void handle_arp_packet(NetworkBuffer* buffer) {
-    ArpHeader* header = (ArpHeader *)&buffer->data[buffer->index];
+static void send_packets_on_entry(ArpEntry* entry) {
+    while (1) {
+        ListNode* node = list_remove_first(&entry->packet_queue);
 
-    if (verify_arp_header(header) == false) {
-        goto delete_and_return;
+        if (node == 0) {
+            return;
+        }
+
+        NetworkPacket* packet = get_struct_containing_list_node(node, NetworkPacket, list_node);
+        mac_send(packet, &entry->mac, ETHER_TYPE_IPV4);
+    }
+}
+
+//--------------------------------------------------------------------------------------------------
+
+static void update_arp_mapping(Ip ip, Mac* mac, bool update_only_if_not_valid) {
+    ArpEntry* entry = find_arp_entry(ip);
+
+    if (entry == 0 || (update_only_if_not_valid && entry->contain_valid_mapping == true)) {
+        return;
     }
 
-    int operation = network_read_16(&header->operation);
-    IpAddress source_ip = network_read_32(&header->source_ip);
-    IpAddress destination_ip = network_read_32(&header->destination_ip);
+    memory_copy(mac, &entry->mac, sizeof(Mac));
+    entry->contain_valid_mapping = true;
+    entry->time = get_time();
+    send_packets_on_entry(entry);
+}
 
-    if (destination_ip != get_ip()) {
-        goto delete_and_return;
+//--------------------------------------------------------------------------------------------------
+
+void handle_arp(NetworkPacket* packet) {
+    if (packet->length < sizeof(ArpHeader)) {
+        goto free;
+    }
+    
+    ArpHeader* header = (ArpHeader *)&packet->data[packet->index];
+
+    if (validate_arp_header(header) == false) {
+        goto free;
     }
 
-    // @Incomplete: add ARP probe handling.
-    if (source_ip == destination_ip) {
-        if (ENABLE_GRATUITOUS_ARP_HANDLING && operation == ARP_OPERATION_REPLY) {
-            int index = find_entry(source_ip);
-            if (index >= 0 && arp_table.items[index].state == ARP_STATE_MAPPED) {
-                memory_copy(&header->source_mac, &arp_table.items[index].mac, sizeof(MacAddress));
-            }
+    u16 operation = read_be16(&header->operation);
+    Ip senders_ip = read_be32(&header->senders_ip);
+    Ip target_ip = read_be32(&header->target_ip);
+
+    if (operation == ARP_OPERATION_REPLY) {
+        if (senders_ip != target_ip && target_ip == get_our_ip()) {
+            // Incoming ARP reply. 
+            update_arp_mapping(senders_ip, &header->senders_mac, true);
         }
     }
     else if (operation == ARP_OPERATION_REQUEST) {
-        send_arp_reply(source_ip, &header->source_mac);
-    }
-    else if (operation == ARP_OPERATION_REPLY && buffer->broadcast == 0) {
-        int index = find_entry(source_ip);
-        if (index >= 0 && arp_table.items[index].state == ARP_STATE_PENDING) {
-            memory_copy(&header->source_mac, &arp_table.items[index].mac, sizeof(MacAddress));
-            arp_entry_send_queued_packets(index);
+        if (senders_ip && senders_ip != target_ip && target_ip == get_our_ip()) {
+            // Incoming ARP request. Respond with ARP reply.
+            send_arp_packet(&header->senders_mac, header->senders_ip, ARP_TYPE_REPLY);
         }
     }
 
-    delete_and_return:
-    free_network_buffer(buffer);
+    free:
+    free_network_packet(packet);
+}
+
+//--------------------------------------------------------------------------------------------------
+
+void arp_task() {
+    list_iterate_safe(it, &used_entries) {
+        ArpEntry* entry = get_struct_containing_list_node(it, ArpEntry, list_node);
+
+
+        if (entry->contain_valid_mapping) {
+            if (get_elapsed(entry->time, get_time()) > ARP_ENTRY_EXPIRATION_INTERVAL) {
+                free_entry(entry);
+            }
+        }
+        else if (get_elapsed(entry->time, get_time()) > ARP_RETRY_INTERVAL) {
+            if (entry->retry_count < ARP_RETRY_MAX_COUNT) {
+                send_arp_packet(0, entry->ip, ARP_TYPE_REQUEST);
+                entry->retry_count++;
+                entry->time = get_time();
+            }
+            else {
+                free_entry(entry);
+            }
+        }
+    }
 }

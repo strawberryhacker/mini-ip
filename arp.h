@@ -9,8 +9,8 @@
 //--------------------------------------------------------------------------------------------------
 
 void arp_init();
-void arp_send(NetworkBuffer* buffer, u32 destination_ip);
 void arp_task();
-void handle_arp_packet(NetworkBuffer* buffer);
+void arp_send(NetworkPacket* packet, Ip ip);
+void handle_arp(NetworkPacket* packet);
 
 #endif

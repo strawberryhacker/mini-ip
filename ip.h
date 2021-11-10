@@ -1,22 +1,23 @@
 // Author: strawberryhacker
 
-#ifndef GPIO_H
-#define GPIO_H
+#ifndef IP_H
+#define IP_H
 
 #include "utilities.h"
-#include "registers.h"
+#include "network.h"
 
 //--------------------------------------------------------------------------------------------------
 
 enum {
-    PIN_FUNCTION_A,
-    PIN_FUNCTION_B,
-    PIN_FUNCTION_C,
-    PIN_FUNCTION_D,
+    IP_PROTOCOL_UDP  = 17,
+    IP_PROTOCOL_ICMP = 1,
 };
 
 //--------------------------------------------------------------------------------------------------
 
-void set_pin_function(GpioHardware* gpio, int pin, int function);
+Ip string_to_ip(const char* string);
+void ip_to_string(Ip ip, char* string);
+void handle_ip(NetworkPacket* packet);
+void ip_send(NetworkPacket* packet, Ip ip, int protocol);
 
 #endif

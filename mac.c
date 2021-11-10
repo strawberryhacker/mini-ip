@@ -1,42 +1,59 @@
 // Author: strawberryhacker
 
 #include "mac.h"
+#include "gmac.h"
 #include "arp.h"
-#include "print.h"
 #include "ip.h"
 
 //--------------------------------------------------------------------------------------------------
 
 typedef struct PACKED {
-    Mac destination_mac;
-    Mac source_mac;
-    u16 type;
+    Mac target_mac;
+    Mac senders_mac;
+    u16 ether_type;
 } MacHeader;
 
 //--------------------------------------------------------------------------------------------------
 
-static inline int hex_to_number(char hex) {
-    if ('0' <= hex && hex <= '9') {
-        return hex - '0';
+static u8 char_to_hex(char c) {
+    if ('0' <= c && c <= '9') {
+        return c - '0';
     }
 
-    // Convert to uppercase.
-    hex &= ~(1 << 5);
-    return ('A' <= hex && hex <= 'F') ? hex - 'A' + 10 : 0;
+    c |= 1 << 5;  // Convert to lowercase.
+    return ('a' <= c && c <= 'f') ? c - 'a' + 10 : 0;
 }
 
 //--------------------------------------------------------------------------------------------------
 
-// The string must be at least 18 characters long.
-void mac_to_string(const Mac* mac, char* string, bool lowercase) {
-    int case_mask = (lowercase) ? 1 << 5 : 0;
-    char* hex_lookup = "0123456789ABCDEF";
+Mac string_to_mac(const char* string) {
+    Mac mac;
 
     for (int i = 0; i < 6; i++) {
-        u8 byte = mac->byte[i];
+        if (string[0] == 0 || string[1] == 0) {
+            break;
+        }
 
-        *string++ = hex_lookup[(byte >> 4) & 0xF] | case_mask;
-        *string++ = hex_lookup[(byte >> 0) & 0xF] | case_mask;
+        mac.address[i] = char_to_hex(string[1]) | (char_to_hex(string[0]) << 4);
+        string += 2;
+
+        if (string[0] == ':') {
+            string++;
+        }
+    }
+
+    return mac;
+}
+
+//--------------------------------------------------------------------------------------------------
+
+void mac_to_string(const Mac* mac, char* string, bool lowercase) {
+    static const char hex_table[] = "0123456789ABCDEF";
+    char case_transform = (lowercase) ? 1 << 5 : 0;
+
+    for (int i = 0; i < 6; i++) {
+        *string++ = hex_table[(mac->address[i] >> 4) & 0xF] | case_transform;
+        *string++ = hex_table[(mac->address[i] >> 0) & 0xF] | case_transform;
 
         if (i != 5) {
             *string++ = ':';
@@ -48,93 +65,54 @@ void mac_to_string(const Mac* mac, char* string, bool lowercase) {
 
 //--------------------------------------------------------------------------------------------------
 
-// This will convert a valid MAC address into network representation. @Note: I did not bother making 
-// this fault-proof. 
-void string_to_mac(Mac* mac, const char* string) {
-    for (int i = 0; i < 6; i++) {
-        int number = 0;
+void mac_send(NetworkPacket* packet, const Mac* mac, u16 ether_type) {
+    packet->length += sizeof(MacHeader);
+    packet->index -= sizeof(MacHeader);
 
-        number = number * 16 + hex_to_number(*string++);
-        number = number * 16 + hex_to_number(*string++);
+    MacHeader* header = (MacHeader *)&packet->data[packet->index];
 
-        mac->byte[i] = (u8)number;
-
-        if (*string == ':') {
-            string++;
-        }
-    }
+    memory_copy(mac, &header->target_mac, sizeof(Mac));
+    memory_copy(get_our_mac(), &header->senders_mac, sizeof(Mac));
+    write_be16(ether_type, &header->ether_type);
+    
+    gmac_send(packet);
 }
 
 //--------------------------------------------------------------------------------------------------
 
-static bool is_outgoing_broadcast(u32 ip, u32 subnet_mask) {
-    return (~ip & ~subnet_mask) == 0;
+void mac_broadcast(NetworkPacket* packet, u16 ether_type) {
+    const Mac mac = { .address = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF } };
+    mac_send(packet, &mac, ether_type);
 }
 
 //--------------------------------------------------------------------------------------------------
 
-void mac_send_to_ip(NetworkBuffer* buffer, u32 ip) {
-    if (is_outgoing_broadcast(ip, get_netmask())) {
-        mac_broadcast(buffer, ETHER_TYPE_IPV4);
-    }
-    else {
-        arp_send(buffer, ip);
-    }
+void mac_send_to_ip(NetworkPacket* packet, Ip ip) {
+    arp_send(packet, ip);
 }
 
 //--------------------------------------------------------------------------------------------------
 
-void mac_send_to_mac(NetworkBuffer* buffer, const Mac* destination_mac, int ether_type) {
-    buffer->index -= sizeof(MacHeader);
-    buffer->length += sizeof(MacHeader);
-
-    MacHeader* header = (MacHeader *)&buffer->data[buffer->index];
-
-    memory_copy(destination_mac, &header->destination_mac, sizeof(Mac));
-    memory_copy(get_mac(), &header->source_mac, sizeof(Mac));
-    network_write_16(ether_type, &header->type);
-
-    network_interface.write(buffer);
-}
-
-//--------------------------------------------------------------------------------------------------
-
-void mac_broadcast(NetworkBuffer* buffer, int ether_type) {
-    Mac broadcast = { .byte = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff } };
-    mac_send_to_mac(buffer, &broadcast, ether_type);
-}
-
-//--------------------------------------------------------------------------------------------------
-
-void mac_receive() {
-    NetworkBuffer* buffer = network_interface.read();
-    if (buffer == 0) {
+void handle_mac(NetworkPacket* packet) {
+    if (packet->length <= sizeof(MacHeader)) {
+        free_network_packet(packet);
         return;
     }
 
-    // This is the entry point for our network stack. Packets are read here, and handed over to the 
-    // next level depending on the header. 
-    if (buffer->length <= sizeof(MacHeader)) {
-        free_network_buffer(buffer);
+    MacHeader* header = (MacHeader *)&packet->data[packet->index];
+
+    packet->length -= sizeof(MacHeader);
+    packet->index += sizeof(MacHeader);
+
+    u16 ether_type = read_be16(&header->ether_type);
+
+    if (ether_type == ETHER_TYPE_ARP) {
+        handle_arp(packet);
     }
-
-    MacHeader* header = (MacHeader *)&buffer->data[buffer->index];
-
-    buffer->index += sizeof(MacHeader);
-    buffer->length -= sizeof(MacHeader);
-
-    // @Note: In our case, the GMAC driver has hardware filtering enabled. If the driver does not support that, 
-    // the broadcast flag, and the address filtering must be handled here.
-
-    switch (network_read_16(&header->type)) {
-        case ETHER_TYPE_IPV4:
-            handle_ip_packet(buffer);
-            break;
-        case ETHER_TYPE_ARP:
-            handle_arp_packet(buffer);
-            break;
-        default:
-            free_network_buffer(buffer);
-            break;
+    else if (ether_type == ETHER_TYPE_IPV4) {
+        handle_ip(packet);
+    }
+    else {
+        free_network_packet(packet);
     }
 }
