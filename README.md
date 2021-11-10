@@ -2,7 +2,7 @@
 
 This is a simple network stack supporting IPv4, ARP, MAC, UDP, DHCP, TFTP. Most functions are zero-copy. To avoid bloating the project, target drivers (uart, timer, etc.) are intentionally left out. Only one example network driver is included. get_time() returns a 32-bit number which increments every millisecond. This is enough as long as we used relative times only.
 
-## Overveiw
+## Overview
 
 The network source file contains the main data structure that are being used. This is the network packet. This is pretty much passed to every single function. The concept is simple. The user allocates a network packet, reserve some space at the start of the buffer, and fills in the user data. The network packet then contain user data, and reserved bytes for the headers. Each layer will append its header in this region. At the mac layer, the packet is passed to the network driver. The gmac DMA will start the transfer from the start of the headers. I suggest going through in the following order:
 
