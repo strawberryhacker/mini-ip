@@ -1,4 +1,4 @@
-// Author: strawberryhacker
+// Copyright (c) 2021 Bjørn Brodtkorb
 
 #ifndef ICMP_H
 #define ICMP_H

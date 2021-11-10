@@ -1,4 +1,4 @@
-// Author: strawberryhacker
+// Copyright (c) 2021 Bjørn Brodtkorb
 
 #include "dhcp.h"
 #include "backoff.h"

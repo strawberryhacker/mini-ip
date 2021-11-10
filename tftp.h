@@ -1,4 +1,4 @@
-// Author: strawberryhacker
+// Copyright (c) 2021 Bjørn Brodtkorb
 
 #ifndef TFTP_H
 #define TFTP_H

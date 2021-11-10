@@ -1,4 +1,4 @@
-// Author: strawberryhacker
+// Copyright (c) 2021 Bjørn Brodtkorb
 
 #ifndef UDP_H
 #define UDP_H
